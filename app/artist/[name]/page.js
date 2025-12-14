@@ -1,86 +1,109 @@
-// app/artist/[name]/page.js
+// app/search/page.js
 
-import supabase from '../../../utils/supabase'
+import supabase from '../../utils/supabase'
+import LiveList from '../components/LiveList'
 
-export async function generateMetadata({ params }) {
-  // ★修正: paramsをawaitする
-  const resolvedParams = await params;
-  const artistName = decodeURIComponent(resolvedParams.name)
-  const year = new Date().getFullYear()
-  
-  return {
-    title: `${artistName}のライブ・チケット情報 ${year} | 東京お笑いライブ検索`,
-    description: `${artistName}の出演するお笑いライブ日程をまとめて検索できます。`,
+export const revalidate = 0;
+
+// ▼ SEO対策: 検索条件に合わせてタイトルを動的に変える設定
+export async function generateMetadata({ searchParams }) {
+  // searchParams を解決（Next.js 15対応）
+  const resolvedSearchParams = await searchParams;
+  const keyword = resolvedSearchParams.keyword || '';
+  const date = resolvedSearchParams.date || '';
+
+  let title = '検索結果';
+  let description = '東京のお笑いライブ検索結果一覧です。';
+
+  if (keyword && date) {
+    title = `「${keyword}」 ${date} のライブ検索結果`;
+    description = `キーワード「${keyword}」、日付「${date}」での検索結果です。`;
+  } else if (keyword) {
+    title = `「${keyword}」のライブ検索結果`;
+    description = `「${keyword}」に関連する東京のお笑いライブ情報です。`;
+  } else if (date) {
+    title = `${date} のライブ検索結果`;
+    description = `${date}に開催される東京のお笑いライブ情報です。`;
   }
+
+  return {
+    title: title,
+    description: description,
+    openGraph: {
+      title: title,
+      description: description,
+    },
+    // Google検索のインデックスを許可しない（検索結果ページは除外するのが一般的）
+    robots: {
+      index: false,
+      follow: true,
+    },
+  };
 }
 
-export default async function ArtistPage({ params }) {
-  // ★修正: paramsをawaitしてから使う
-  const resolvedParams = await params;
-  const artistName = decodeURIComponent(resolvedParams.name)
-  
-  const today = new Date().toISOString().split('T')[0]
+export default async function SearchResultPage({ searchParams }) {
+  // searchParamsをawaitしてから使う
+  const resolvedSearchParams = await searchParams;
+  const date = resolvedSearchParams.date || '';
+  const keyword = resolvedSearchParams.keyword || '';
 
   const { data: lives, error } = await supabase
     .from('lives')
     .select('*')
-    .ilike('performers', `%${artistName}%`) 
-    .gte('live_date', today)
+    .gte('live_date', new Date().toISOString().split('T')[0]) 
     .order('live_date', { ascending: true });
 
   if (error) {
-    console.error(error);
-    return <div className="p-8">エラーが発生しました</div>
+    return <div className="p-8 text-center text-red-500">データ取得エラーが発生しました</div>;
+  }
+
+  let filteredLives = lives || [];
+
+  if (date) {
+    filteredLives = filteredLives.filter(live => live.live_date && live.live_date.startsWith(date));
+  }
+
+  if (keyword) {
+    const k = keyword.toLowerCase();
+    filteredLives = filteredLives.filter(live => {
+      const target = `
+        ${live.title} 
+        ${live.venue} 
+        ${live.performers} 
+        ${live.performers_kana ? JSON.stringify(live.performers_kana) : ''}
+      `.toLowerCase();
+      return target.includes(k);
+    });
   }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* (中身は変更なし) */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-3xl mx-auto px-4 py-4">
-          <a href="/" className="text-blue-500 hover:underline text-sm">← トップページに戻る</a>
+      <div className="bg-white shadow-sm mb-6">
+        <div className="max-w-3xl mx-auto px-4 py-4 flex justify-between items-center">
+          <a href="/" className="text-blue-500 hover:underline font-bold">← トップに戻る</a>
+          <h1 className="font-bold text-gray-700">検索結果</h1>
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-2">🎤 {artistName}</h1>
-        <p className="text-gray-600 mb-8">{artistName} の出演ライブ・チケット情報</p>
+      <div className="max-w-3xl mx-auto px-4">
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100 text-sm text-gray-700">
+            <p>📅 日付: <b>{date || '指定なし'}</b></p>
+            <p>🔍 キーワード: <b>{keyword || '指定なし'}</b></p>
+        </div>
 
-        {(!lives || lives.length === 0) ? (
-            <div className="bg-white p-8 rounded-lg shadow text-center text-gray-500">
-              <p>現在予定されているライブ情報は見つかりませんでした。</p>
-            </div>
+        <h2 className="text-xl font-bold mb-4 text-gray-700 border-l-4 border-red-500 pl-3">
+          {filteredLives.length} 件見つかりました
+        </h2>
+
+        {filteredLives.length === 0 ? (
+          <div className="text-center py-10 text-gray-500 bg-white rounded-lg">
+            条件に一致するライブはありませんでした。<br/>
+            別のキーワードや日付で試してみてください。
+          </div>
         ) : (
-            <ul className="space-y-4">
-            {lives.map((live) => (
-                <li key={live.id} className="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
-                <div className="flex justify-between items-start">
-                    <h2 className="text-xl font-bold mb-2 text-blue-600">
-                    <a href={live.source_url} target="_blank" rel="noreferrer" className="hover:underline">
-                        {live.title}
-                    </a>
-                    </h2>
-                    <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded">
-                    {live.ticket_status || '販売中'}
-                    </span>
-                </div>
-                <div className="text-gray-700 mt-2 space-y-1">
-                    <p suppressHydrationWarning>
-                    📅 日時: {new Date(live.live_date).toLocaleString('ja-JP', {
-                        year: 'numeric', month: 'numeric', day: 'numeric', 
-                        hour: '2-digit', minute: '2-digit', weekday: 'short' 
-                    })}
-                    </p>
-                    <p>📍 会場: {live.venue}</p>
-                    <p className="text-sm text-gray-500 mt-2 line-clamp-2">
-                        出演: {live.performers}
-                    </p>
-                </div>
-                </li>
-            ))}
-            </ul>
+          <LiveList initialLives={filteredLives} />
         )}
       </div>
     </div>
-  )
+  );
 }
