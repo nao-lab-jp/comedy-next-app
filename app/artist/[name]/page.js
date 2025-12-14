@@ -1,7 +1,7 @@
 // app/search/page.js
 
 // ▼ 修正箇所: @ を使ってルートからパスを指定（これで階層エラーが消えます）
-import { supabase } from '@/utils/supabase'; 
+import supabase from '@/utils/supabase'; 
 import LiveList from '@/components/LiveList';
 
 export const revalidate = 0;
