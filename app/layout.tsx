@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { GoogleAnalytics } from '@next/third-parties/google';
+import Script from "next/script"; // ◀ AdSenseスクリプト用に追加
+import Footer from "./components/Footer";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// ▼ TypeScript用に型定義 (: Metadata) を追加しました
 export const metadata: Metadata = {
-  // サイトのドメイン（これを指定しておくと画像のURLなどが短く書けます）
   metadataBase: new URL("https://owarai-live.com"),
 
   title: {
@@ -29,7 +29,6 @@ export const metadata: Metadata = {
     siteName: "東京お笑いライブ検索",
     locale: "ja_JP",
     type: "website",
-    // ▼ 追加: 画像設定（publicフォルダのogp.pngを参照します）
     images: [
       {
         url: "/ogp.png",
@@ -44,17 +43,18 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "東京お笑いライブ検索",
     description: "推しの芸人のライブ予定を今すぐチェック！",
-    // ▼ 追加: Twitter用の画像指定
     images: ["/ogp.png"],
   },
 
-  // ▼ Google Search Consoleの認証コード
+  // ▼ 追加：Google Search Console と AdSense の認証設定
   verification: {
     google: 'GwfHT8pYbX-GFlZC8KSmLWSvs1jn70agoXJZwnd82EY',
   },
+  other: {
+    "google-adsense-account": "ca-pub-8769762821267157", // ◀ 認証用メタタグ
+  },
 };
 
-// ▼ ここもTypeScript用に型定義を追加しました
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -62,10 +62,31 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body className={inter.className}>
-        {children}
+      <head>
+        {/* ▼ 追加：Google AdSense 審査用スクリプト */}
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8769762821267157"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+      </head>
+      {/* ブラウザの拡張機能による干渉エラーを防ぐため suppressHydrationWarning を付与 */}
+      <body className={`${inter.className} flex flex-col min-h-screen`} suppressHydrationWarning>
+        
+        {/* メインコンテンツ：flex-grow でフッターを最下部へ押し下げます */}
+        <main className="flex-grow">
+          {children}
+        </main>
+
+        {/* 全ページ共通のフッター */}
+        <Footer />
+
+        {/* GoogleAnalytics：環境変数が設定されている場合のみ読み込み */}
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+        )}
       </body>
-      <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID || ""} />
     </html>
   );
 }
