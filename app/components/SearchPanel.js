@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation' // ページ移動用
+import { useRouter } from 'next/navigation'
 
 export default function SearchPanel({ artistGroups }) {
   const router = useRouter();
@@ -11,12 +11,12 @@ export default function SearchPanel({ artistGroups }) {
 
   // 検索ボタンを押したときの処理
   const handleSearchClick = () => {
-    // 1. URLパラメータを作る (例: ?date=2025-01-01&keyword=ライブ)
     const params = new URLSearchParams();
     if (date) params.set('date', date);
-    if (keyword) params.set('keyword', keyword);
+    
+    // ★重要: パラメータ名を 'q' に統一します
+    if (keyword) params.set('q', keyword); 
 
-    // 2. 新しいページ (/search) に移動する
     router.push(`/search?${params.toString()}`);
   };
 
@@ -27,10 +27,10 @@ export default function SearchPanel({ artistGroups }) {
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
       
-      {/* 検索ボタン */}
+      {/* 検索実行ボタン */}
       <button 
         onClick={handleSearchClick}
-        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition mb-8 flex justify-center items-center gap-2 transform hover:scale-[1.01]"
+        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-4 rounded-lg shadow-md transition mb-8 flex justify-center items-center gap-2 transform hover:scale-[1.01]"
       >
         この条件で検索する 🚀
       </button>
@@ -42,7 +42,7 @@ export default function SearchPanel({ artistGroups }) {
           type="date" 
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="w-full p-3 bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-200 transition"
+          className="w-full p-3 bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-200 transition text-gray-800"
         />
       </div>
 
@@ -51,10 +51,11 @@ export default function SearchPanel({ artistGroups }) {
         <h3 className="text-lg font-bold text-gray-700 mb-2">🔍 キーワードで探す</h3>
         <input 
           type="text" 
-          placeholder="会場名、ライブ名など..." 
+          placeholder="コンビ名、会場名、ライブ名など..." 
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
-          className="w-full p-3 bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-200 transition"
+          onKeyDown={(e) => e.key === 'Enter' && handleSearchClick()}
+          className="w-full p-3 bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-200 transition text-gray-800"
         />
       </div>
 
