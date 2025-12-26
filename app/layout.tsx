@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { GoogleAnalytics } from '@next/third-parties/google';
-import Script from "next/script"; // ◀ AdSenseスクリプト用に追加
+import Script from "next/script";
 import Footer from "./components/Footer";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  // ★重要1: サイトのドメイン（ベースURL）
   metadataBase: new URL("https://owarai-live.com"),
 
   title: {
@@ -16,6 +17,12 @@ export const metadata: Metadata = {
   },
 
   description: "東京で開催されるお笑いライブの情報を毎日自動更新。好きな芸人の出演ライブを一発検索できるWebサービスです。",
+
+  // ★重要2: これが重複エラー対策の決定打です
+  // 「パラメータ違いのURLは、すべて正規のURL（./）として扱ってください」という指示になります
+  alternates: {
+    canonical: './',
+  },
 
   robots: {
     index: true,
@@ -46,12 +53,11 @@ export const metadata: Metadata = {
     images: ["/ogp.png"],
   },
 
-  // ▼ 追加：Google Search Console と AdSense の認証設定
   verification: {
     google: 'GwfHT8pYbX-GFlZC8KSmLWSvs1jn70agoXJZwnd82EY',
   },
   other: {
-    "google-adsense-account": "ca-pub-8769762821267157", // ◀ 認証用メタタグ
+    "google-adsense-account": "ca-pub-8769762821267157",
   },
 };
 
@@ -62,27 +68,26 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <head>
-        {/* ▼ 追加：Google AdSense 審査用スクリプト */}
+      {/* Next.jsのApp Routerでは、metadataの内容が自動的に<head>に展開されます。
+        Scriptコンポーネントはbody内などに配置しても適切に動作するため、
+        手動の<head>タグは削除し、構造をシンプルにしました。
+      */}
+      <body className={`${inter.className} flex flex-col min-h-screen`} suppressHydrationWarning>
+        
+        {/* AdSense審査用スクリプト */}
         <Script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8769762821267157"
           crossOrigin="anonymous"
           strategy="afterInteractive"
         />
-      </head>
-      {/* ブラウザの拡張機能による干渉エラーを防ぐため suppressHydrationWarning を付与 */}
-      <body className={`${inter.className} flex flex-col min-h-screen`} suppressHydrationWarning>
-        
-        {/* メインコンテンツ：flex-grow でフッターを最下部へ押し下げます */}
+
         <main className="flex-grow">
           {children}
         </main>
 
-        {/* 全ページ共通のフッター */}
         <Footer />
 
-        {/* GoogleAnalytics：環境変数が設定されている場合のみ読み込み */}
         {process.env.NEXT_PUBLIC_GA_ID && (
           <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
         )}
