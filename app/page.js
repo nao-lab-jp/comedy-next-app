@@ -37,11 +37,11 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-gray-50 pb-20">
-      {/* ヘッダー：左右配置に変更 */}
-      <div className="bg-white p-6 shadow-sm mb-6 flex justify-between items-center">
+      {/* ヘッダー：タイトル中央、リンク右端固定 */}
+      <div className="bg-white p-6 shadow-sm mb-6 relative flex items-center justify-center">
         <h1 className="text-2xl font-bold text-gray-800">🗼 東京お笑いライブ検索</h1>
         
-        <Link href="/guide" className="text-sm font-bold text-gray-600 hover:text-blue-600 flex items-center gap-1">
+        <Link href="/guide" className="absolute right-6 text-sm font-bold text-gray-600 hover:text-blue-600 flex items-center gap-1">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
