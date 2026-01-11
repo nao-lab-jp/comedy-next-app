@@ -19,7 +19,6 @@ export const metadata: Metadata = {
   description: "東京で開催されるお笑いライブの情報を毎日自動更新。好きな芸人の出演ライブを一発検索できるWebサービスです。",
 
   // ★重要2: これが重複エラー対策の決定打です
-  // 「パラメータ違いのURLは、すべて正規のURL（./）として扱ってください」という指示になります
   alternates: {
     canonical: './',
   },
@@ -66,6 +65,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  
+  // ▼ 追加: Google検索結果でのサイト名表示用データ (JSON-LD)
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "お笑いライブ検索", // ◀ ここに指定した名前がGoogleで表示されやすくなります
+    "alternateName": ["東京お笑いライブ検索", "owarai-live"],
+    "url": "https://owarai-live.com/",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://owarai-live.com/search?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  };
+
   return (
     <html lang="ja">
       {/* Next.jsのApp Routerでは、metadataの内容が自動的に<head>に展開されます。
@@ -74,6 +88,12 @@ export default function RootLayout({
       */}
       <body className={`${inter.className} flex flex-col min-h-screen`} suppressHydrationWarning>
         
+        {/* ▼ 追加: 構造化データを埋め込むためのスクリプト */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+
         {/* AdSense審査用スクリプト */}
         <Script
           async
