@@ -11,7 +11,7 @@ export default function SpecialFeatures() {
       artists: [
         'たくろう', 'ヤーレンズ', '真空ジェシカ', 'エバース', 
         'カナメストーン', '豪快キャプテン', 'ドンデコルテ', 'ママタルト',
-        'めぞん', 'ヨネダ2000' // ※2025年の実際のメンバーに書き換えてください
+        'めぞん', 'ヨネダ2000'
       ]
     },
     {
@@ -21,7 +21,7 @@ export default function SpecialFeatures() {
       artists: [
         'ロングコートダディ', '青色1号', 'うるとらブギーズ', '元祖いちごちゃん',
         'しずる', 'トム・ブラウン', 'ファイヤーサンダー', 'ベルナルド',
-        'や団', 'レインボー' // ※実際のメンバーに書き換えてください
+        'や団', 'レインボー'
       ]
     }
   ];
@@ -38,9 +38,8 @@ export default function SpecialFeatures() {
             {feature.artists.map((artist) => (
               <Link 
                 key={artist}
-                // 検索機能と連動させるため、クエリパラメータを渡す（SearchPanelの実装によります）
-                // または単純にその芸人のページがあれば `/artists/${artist}` でもOK
-                href={`/?q=${encodeURIComponent(artist)}`} 
+                // ▼▼▼ ここを /search?q= に修正しました ▼▼▼
+                href={`/search?q=${encodeURIComponent(artist)}`} 
                 className="bg-white hover:bg-gray-100 text-gray-700 text-sm py-1.5 px-3 rounded-full border border-gray-200 transition-colors shadow-sm"
               >
                 {artist}
