@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import supabase from '../utils/supabase'
 import SearchPanel from './components/SearchPanel'
+import SpecialFeatures from './components/SpecialFeatures' // 1. 追加: 特集コンポーネントを読み込み
 import { groupArtists } from '../utils/artistHelper'
 import { getCachedAIPickedShows } from '../utils/recommend-engine' // ★キャッシュ版に変更
 import { RecommendedShows } from './components/RecommendedShows'
@@ -51,6 +52,9 @@ export default async function Home() {
 
       <div className="max-w-3xl mx-auto px-4">
         <SearchPanel artistGroups={artistGroups} />
+
+        {/* 2. 追加: 特集エリア（M-1/KOCなど） */}
+        <SpecialFeatures />
 
         {recommendedShows.length > 0 && (
           <div className="mt-12">
