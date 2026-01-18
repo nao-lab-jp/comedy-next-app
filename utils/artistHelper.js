@@ -8,7 +8,19 @@ export function groupArtists(lives) {
 
   lives.forEach(live => {
     const names = live.performers_clean || [];
-    const kanas = live.performers_kana || []; 
+    
+    // ★重要修正: DBの型が text の場合、文字列として返ってくるため JSON.parse で配列に戻す
+    let kanas = live.performers_kana || [];
+    if (typeof kanas === 'string') {
+      try {
+        // Postgresの配列形式 '{a,b}' または JSON形式 '[a,b]' 両方に対応
+        // 基本はJSON形式のようなので parse を試みる
+        kanas = JSON.parse(kanas);
+      } catch (e) {
+        // 万が一パースできない場合は、名前をそのまま使うために空配列にする
+        kanas = [];
+      }
+    }
 
     names.forEach((name, index) => {
       // 除外フィルター
@@ -17,6 +29,7 @@ export function groupArtists(lives) {
       }
         
       // 1. よみがなを取得（データ欠け対策）＆ 前後の空白削除
+      // 配列に戻したので、正しく index で取得できるようになります
       let yomi = (kanas[index] || name).trim();
       
       // 2. カタカナをひらがなに統一変換
@@ -42,11 +55,11 @@ export function groupArtists(lives) {
     // UI側で使いやすいように { name, kana } のオブジェクト形式で保存します
     const artistObj = { name, kana: yomi };
 
-    // 判定ロジック（小さい「っ」「ゃ」や濁点も漏らさないように範囲を調整）
+    // 判定ロジック
     if (/[ぁ-おゔ]/.test(char)) groups["あ行"].push(artistObj);
     else if (/[か-ごゕゖ]/.test(char)) groups["か行"].push(artistObj);
     else if (/[さ-ぞ]/.test(char)) groups["さ行"].push(artistObj);
-    else if (/[た-どっ]/.test(char)) groups["た行"].push(artistObj); // 「っ」はた行扱い
+    else if (/[た-どっ]/.test(char)) groups["た行"].push(artistObj);
     else if (/[な-の]/.test(char)) groups["な行"].push(artistObj);
     else if (/[は-ぽ]/.test(char)) groups["は行"].push(artistObj);
     else if (/[ま-も]/.test(char)) groups["ま行"].push(artistObj);
