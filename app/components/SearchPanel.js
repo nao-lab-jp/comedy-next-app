@@ -14,7 +14,7 @@ export default function SearchPanel({ artistGroups }) {
     const params = new URLSearchParams();
     if (date) params.set('date', date);
     
-    // ★重要: パラメータ名を 'q' に統一します
+    // パラメータ名を 'q' に統一
     if (keyword) params.set('q', keyword); 
 
     router.push(`/search?${params.toString()}`);
@@ -61,7 +61,7 @@ export default function SearchPanel({ artistGroups }) {
 
       <hr className="border-gray-100 mb-8" />
 
-      {/* 芸人タブ（変更なし） */}
+      {/* 芸人タブ */}
       <div>
         <h3 className="text-lg font-bold text-gray-700 mb-1">🎤 芸人名から探す</h3>
         <p className="text-xs text-gray-400 mb-4">※クリックするとその芸人のページへ移動します</p>
@@ -82,15 +82,19 @@ export default function SearchPanel({ artistGroups }) {
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-1">
           {artistGroups[activeTab]?.length > 0 ? (
-            artistGroups[activeTab].map((name) => (
+            // ▼▼▼ ここを修正しました ▼▼▼
+            // artist は { name: "...", kana: "..." } というオブジェクトなので、
+            // artist.name で名前を取り出す必要があります。
+            artistGroups[activeTab].map((artist) => (
               <button
-                key={name}
-                onClick={() => handleArtistClick(name)}
+                key={artist.name}
+                onClick={() => handleArtistClick(artist.name)}
                 className="text-left text-sm p-2 hover:bg-blue-50 text-blue-600 rounded transition truncate border border-transparent hover:border-blue-100"
               >
-                {name}
+                {artist.name}
               </button>
             ))
+            // ▲▲▲ 修正終わり ▲▲▲
           ) : (
             <p className="text-gray-400 text-sm col-span-3 py-4 text-center">該当する芸人がいません</p>
           )}
