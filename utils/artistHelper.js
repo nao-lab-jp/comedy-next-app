@@ -5,7 +5,7 @@
  * データベースの clean配列 と kana配列 のインデックスを合わせて紐付けます
  */
 export function groupArtists(lives) {
-  const artistMap = new Map(); // 「芸人名」と「よみ」のペアを保存する場所
+  const artistMap = new Map(); // 「芸人名」と「正規化されたよみ」のペア
 
   lives.forEach(live => {
     // データベースから配列として取得（nullの場合は空配列にする）
@@ -18,10 +18,13 @@ export function groupArtists(lives) {
         return;
       }
         
-      // ★重要：同じインデックスの「よみがな」を取得
-      // データ欠け対策：かなが無ければ名前をそのまま使う
-      const yomi = kanas[index] || name;
+      // ★修正1: データ欠け対策 ＆ 前後の空白削除(.trim)
+      let yomi = (kanas[index] || name).trim();
       
+      // ★修正2: カタカナをひらがなに変換（この時点で変換しておくことで、ソートも正確になります）
+      // ア(30A2) -> あ(3042) の差分 0x60 を引く
+      yomi = yomi.replace(/[\u30a1-\u30f6]/g, m => String.fromCharCode(m.charCodeAt(0) - 0x60));
+
       // 重複を防ぐため、まだ登録していない名前だけ追加
       if (!artistMap.has(name)) {
         artistMap.set(name, yomi);
@@ -38,21 +41,17 @@ export function groupArtists(lives) {
   // 全芸人をループして箱に振り分ける
   artistMap.forEach((yomi, name) => {
     // 読み仮名の1文字目を取得
-    let char = yomi.charAt(0);
-    
-    // カタカナならひらがなに変換（正規表現でシフト変換）
-    // ア(30A2) -> あ(3042) の差分が 0x60
-    char = char.replace(/[\u30a1-\u30f6]/g, m => String.fromCharCode(m.charCodeAt(0) - 0x60));
+    const char = yomi.charAt(0);
 
-    // Unicode範囲で判定
-    if (/[あ-お]/.test(char)) groups["あ行"].push(name);
-    else if (/[か-ご]/.test(char)) groups["か行"].push(name);
-    else if (/[さ-ぞ]/.test(char)) groups["さ行"].push(name);
-    else if (/[た-ど]/.test(char)) groups["た行"].push(name);
+    // ★修正3: 正規表現の範囲を微調整（小さい「ぁ」「っ」「ゃ」なども含むように変更）
+    if (/[ぁ-おゔ]/.test(char)) groups["あ行"].push(name);      // ぁ〜お、ゔ
+    else if (/[か-ご]/.test(char)) groups["か行"].push(name); // か〜ご（がぎぐげご含む）
+    else if (/[さ-ぞ]/.test(char)) groups["さ行"].push(name); // さ〜ぞ（ざじずぜぞ含む）
+    else if (/[た-ど]/.test(char)) groups["た行"].push(name); // た〜ど（っ、だぢづでど含む）
     else if (/[な-の]/.test(char)) groups["な行"].push(name);
-    else if (/[は-ぽ]/.test(char)) groups["は行"].push(name);
+    else if (/[は-ぽ]/.test(char)) groups["は行"].push(name); // は〜ぽ（ばぱ含む）
     else if (/[ま-も]/.test(char)) groups["ま行"].push(name);
-    else if (/[や-よ]/.test(char)) groups["や行"].push(name);
+    else if (/[ゃ-よ]/.test(char)) groups["や行"].push(name); // ゃ〜よ
     else if (/[ら-ろ]/.test(char)) groups["ら行"].push(name);
     else if (/[わ-ん]/.test(char)) groups["わ行"].push(name);
     else groups["A-Z/他"].push(name);
