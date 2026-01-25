@@ -5,6 +5,23 @@ export default function SpecialFeatures() {
   // ここに表示したい特集と芸人リストを定義します
   const features = [
     {
+      // ▼▼▼ ここに「注目芸人」を追加しました ▼▼▼
+      title: '✨ 注目芸人',
+      color: 'bg-pink-50 border-pink-200', // 目立つようにピンク系に設定
+      icon: '👀',
+      artists: [
+        '令和ロマン',
+        'かまいたち',
+        '霜降り明星',
+        '粗品',
+        'さらば青春の光',
+        'チョコレートプラネット',
+        'ダイアン',
+        'ニューヨーク',
+        'ジャルジャル'
+      ]
+    },
+    {
       title: '🏆 2025 M-1グランプリ 決勝進出',
       color: 'bg-yellow-50 border-yellow-200',
       icon: '🔥',
@@ -38,7 +55,6 @@ export default function SpecialFeatures() {
             {feature.artists.map((artist) => (
               <Link 
                 key={artist}
-                // ▼▼▼ ここを /search?q= に修正しました ▼▼▼
                 href={`/search?q=${encodeURIComponent(artist)}`} 
                 className="bg-white hover:bg-gray-100 text-gray-700 text-sm py-1.5 px-3 rounded-full border border-gray-200 transition-colors shadow-sm"
               >
