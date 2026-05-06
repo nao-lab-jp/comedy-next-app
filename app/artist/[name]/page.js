@@ -1,18 +1,28 @@
 // app/artist/[name]/page.js
-
-// ▼ utilsは一番外側（ルート）にあるのでこのまま
 import supabase from '@/utils/supabase';
-
-// ▼ componentsは appフォルダの中にある可能性が高いので /app を追加しました
 import LiveList from '@/app/components/LiveList';
 
 export const revalidate = 0;
 
-export async function generateMetadata({ params }) {
-  // Next.js 15対応: paramsをawaitする
-  const { name } = await params;
+// ▼ ① テスト用に「独自の紹介文とSNS/YouTubeデータ」を用意する
+const artistProfiles = {
+  // ▼ 滝音（厚めの紹介文 ＋ SNS ＋ YouTube）
+  "滝音": {
+    description: "滝音（たきおん）は、吉本興業に所属するさすけと秋定遼太郎によるお笑いコンビ。キングオブコント2020ファイナリストであり、M-1グランプリでも幾度も準決勝へ進出する実力派です。最大の特徴は、ツッコミのさすけが放つ「ベイビーワード」と呼ばれる独特な造語（例：「あたおか」「よだれだこ」など）を用いた唯一無二の漫才とコント。ボケの秋定が放つ脱力系のボケに対し、甲高い声で放たれる予測不能なツッコミフレーズが劇場で爆笑をさらっています。2024年4月からは大阪のよしもと漫才劇場を卒業し、活動の拠点を東京へと移しました。テレビ出演はもちろん、ルミネtheよしもとや神保町よしもと漫才劇場など、東京のライブシーンでも欠かせない存在として日々舞台に立ち続けています。",
+    twitter: "un_sasuke", // 例: さすけさんのアカウントID
+    instagram: "taki_on_official", // 例: 公式アカウントID
+    youtube_id: "7zU_M_CqVpU" // 例: 埋め込みたいYouTube動画のID（URLの v= の後の文字列）
+  },
   
-  // URLの日本語（%E3%81...）を元の文字に戻す
+  // ▼ 虹の黄昏（軽めの紹介文 ＋ Xのみ）
+  "虹の黄昏": {
+    description: "虹の黄昏（にじのたそがれ）は、かまぼこ体育館と野沢ダイブ禁止によるフリーのお笑いコンビ。「地下お笑い界の帝王」とも呼ばれ、小道具を使った予測不能でハイテンションな芸風が特徴です。",
+    twitter: "nijinotameshi" // 例: 公式アカウントID
+  }
+};
+
+export async function generateMetadata({ params }) {
+  const { name } = await params;
   const artistName = decodeURIComponent(name);
 
   return {
@@ -26,12 +36,13 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function ArtistPage({ params }) {
-  // paramsをawaitしてから使う
   const { name } = await params;
   const artistName = decodeURIComponent(name);
 
+  // ▼ ② 用意したデータの中から、今回の芸人さんのデータがあるか探す
+  const profileData = artistProfiles[artistName];
+
   // データベースから検索
-  // ※ここで絞り込まず全件取ってきてJSでフィルタリングする方式（部分一致のため）
   const { data: lives, error } = await supabase
     .from('lives')
     .select('*')
@@ -43,7 +54,7 @@ export default async function ArtistPage({ params }) {
     return <div className="p-8 text-center text-red-500">データ取得エラーが発生しました</div>;
   }
 
-  // クライアント側でフィルタリング（出演者名にartistNameが含まれているか）
+  // クライアント側でフィルタリング
   const filteredLives = (lives || []).filter(live => {
     const target = `
       ${live.title} 
@@ -51,8 +62,6 @@ export default async function ArtistPage({ params }) {
       ${live.performers} 
       ${live.performers_kana || ''}
     `.toLowerCase();
-    // スペース区切りの検索にも対応できるようにする場合、ここでさらに分割ロジックを入れることも可能
-    // 今回は単純な部分一致
     return target.includes(artistName.toLowerCase());
   });
 
@@ -70,6 +79,60 @@ export default async function ArtistPage({ params }) {
             <h2 className="text-2xl font-bold text-gray-800">{artistName}</h2>
             <p className="text-gray-500 text-sm mt-1">の出演ライブ</p>
         </div>
+
+        {/* ▼ ③ ここから追加：プロフィールデータやSNS/YouTubeがあれば表示する ▼ */}
+        {profileData && (
+          <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100 mb-8">
+            <h3 className="font-bold text-gray-800 mb-2 border-b pb-2">
+              {artistName}の紹介・公式リンク
+            </h3>
+            
+            <p className="text-gray-600 text-sm leading-relaxed mb-4">
+              {profileData.description}
+            </p>
+
+            {/* SNSリンクの表示（データが存在する場合のみ表示） */}
+            {(profileData.twitter || profileData.instagram) && (
+              <div className="flex gap-3 mb-4">
+                {profileData.twitter && (
+                  <a 
+                    href={`https://x.com/${profileData.twitter}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs bg-black text-white px-3 py-1.5 rounded-full hover:opacity-80 transition"
+                  >
+                    X (Twitter)
+                  </a>
+                )}
+                {profileData.instagram && (
+                  <a 
+                    href={`https://instagram.com/${profileData.instagram}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1.5 rounded-full hover:opacity-80 transition"
+                  >
+                    Instagram
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* YouTubeの埋め込み表示（データが存在する場合のみ表示） */}
+            {profileData.youtube_id && (
+              <div className="aspect-video w-full mt-2">
+                <iframe
+                  className="w-full h-full rounded-lg"
+                  src={`https://www.youtube.com/embed/${profileData.youtube_id}`}
+                  title={`${artistName}のYouTube動画`}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            )}
+          </div>
+        )}
+        {/* ▲ ここまで追加 ▲ */}
 
         <h3 className="text-lg font-bold mb-4 text-gray-700 border-l-4 border-orange-500 pl-3">
           {filteredLives.length} 件の出演予定
