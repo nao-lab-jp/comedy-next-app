@@ -22,10 +22,10 @@ export default async function ArtistPage({ params }) {
   const { name } = await params;
   const artistName = decodeURIComponent(name);
 
-  // ▼ ① Supabaseから芸人のプロフィール（紹介文）を取得
+  // ▼ ① Supabaseから芸人のプロフィールと、アフィリエイトリンク（afi_link）を取得
   const { data: profileData } = await supabase
     .from('artist_profiles')
-    .select('description')
+    .select('description, afi_link') // ← ここを afi_link に変更
     .eq('name', artistName)
     .single();
 
@@ -67,7 +67,7 @@ export default async function ArtistPage({ params }) {
             <p className="text-gray-500 text-sm mt-1">の出演ライブ</p>
         </div>
 
-        {/* ▼ ③ 紹介文があれば表示する（SNSやYouTubeはなし） ▼ */}
+        {/* ▼ ③ 紹介文があれば表示する */}
         {profileData?.description && (
           <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100 mb-8">
             <h3 className="font-bold text-gray-800 mb-2 border-b pb-2">
@@ -77,6 +77,26 @@ export default async function ArtistPage({ params }) {
             {/* whitespace-pre-wrapをつけているので、AIが作った改行も正しく表示されます */}
             <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
               {profileData.description}
+            </p>
+          </div>
+        )}
+
+        {/* ▼ ★修正：afi_link に値がある芸人のみAmazonボタンを表示 ▼ */}
+        {profileData?.afi_link && (
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-8 text-center">
+            <h4 className="font-bold text-gray-800 text-sm mb-3">
+              📺 {artistName} の出演・関連作品をチェック！
+            </h4>
+            <a 
+              href={profileData.afi_link} // ← ここを afi_link に変更
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-block bg-[#FF9900] hover:bg-[#E38800] text-white font-bold px-6 py-3 rounded-lg shadow-md transition-colors text-sm"
+            >
+              ▶ Amazonプライムビデオ（無料体験あり）で見る
+            </a>
+            <p className="text-[10px] text-gray-400 mt-2">
+              ※時期により配信内容が異なる場合があります。リンク先でご確認ください。
             </p>
           </div>
         )}
