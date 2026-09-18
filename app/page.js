@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import supabase from '../utils/supabase'
+import fs from 'fs'
+import path from 'path'
 import SearchPanel from './components/SearchPanel'
 import SpecialFeatures from './components/SpecialFeatures'
 import { groupArtists } from '../utils/artistHelper'
@@ -9,26 +10,30 @@ import { RecommendedShows } from './components/RecommendedShows'
 // トップページ全体を24時間キャッシュ
 export const revalidate = 86400;
 
+// Supabase egress超過に伴う緊急措置: public/events.json (DBからの静的スナップショット) を読む
+function loadEvents() {
+  const filePath = path.join(process.cwd(), 'public', 'events.json');
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  return JSON.parse(raw);
+}
+
 export default async function Home() {
   const today = new Date().toISOString().split('T')[0];
-  
+
   const nextWeekStart = new Date();
   nextWeekStart.setDate(nextWeekStart.getDate() + 7);
   const nextWeekStr = nextWeekStart.toISOString().split('T')[0];
 
+  const events = loadEvents();
+
   // 1. 芸人リスト作成用の全データ取得
-  const { data: allLives } = await supabase
-    .from('lives')
-    .select('*')
-    .gte('live_date', today);
+  const allLives = events.filter(live => live.live_date >= today);
 
   // 2. AIレコメンド用の候補取得
-  const { data: candidates } = await supabase
-    .from('lives')
-    .select('*')
-    .gte('live_date', nextWeekStr)
-    .order('live_date', { ascending: true })
-    .limit(50);
+  const candidates = events
+    .filter(live => live.live_date >= nextWeekStr)
+    .sort((a, b) => a.live_date.localeCompare(b.live_date))
+    .slice(0, 50);
 
   const artistGroups = groupArtists(allLives || []);
 
