@@ -1,21 +1,13 @@
 import Link from 'next/link'
-import fs from 'fs'
-import path from 'path'
 import SearchPanel from './components/SearchPanel'
 import SpecialFeatures from './components/SpecialFeatures'
 import { groupArtists } from '../utils/artistHelper'
+import { loadEvents } from '../utils/events'
 import { getCachedAIPickedShows } from '../utils/recommend-engine'
 import { RecommendedShows } from './components/RecommendedShows'
 
 // トップページ全体を24時間キャッシュ
 export const revalidate = 86400;
-
-// Supabase egress超過に伴う緊急措置: public/events.json (DBからの静的スナップショット) を読む
-function loadEvents() {
-  const filePath = path.join(process.cwd(), 'public', 'events.json');
-  const raw = fs.readFileSync(filePath, 'utf-8');
-  return JSON.parse(raw);
-}
 
 export default async function Home() {
   const today = new Date().toISOString().split('T')[0];

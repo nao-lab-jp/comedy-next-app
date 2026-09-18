@@ -1,5 +1,6 @@
 // app/artist/[name]/page.js
 import supabase from '@/utils/supabase';
+import { loadEvents } from '@/utils/events';
 import LiveList from '@/app/components/LiveList';
 
 export const revalidate = 0;
@@ -23,23 +24,24 @@ export default async function ArtistPage({ params }) {
   const artistName = decodeURIComponent(name);
 
   // ▼ ① Supabaseから芸人のプロフィールと、アフィリエイトリンク（afi_link）を取得
-  const { data: profileData } = await supabase
-    .from('artist_profiles')
-    .select('description, afi_link') // ← ここを afi_link に変更
-    .eq('name', artistName)
-    .single();
-
-  // ② ライブ一覧をデータベースから取得
-  const { data: lives, error } = await supabase
-    .from('lives')
-    .select('*')
-    .gte('live_date', new Date().toISOString().split('T')[0])
-    .order('live_date', { ascending: true });
-
-  if (error) {
-    console.error('Supabase error:', error);
-    return <div className="p-8 text-center text-red-500">データ取得エラーが発生しました</div>;
+  // egress超過でAPIがブロックされている間は失敗しうるので、落とさず握りつぶす
+  let profileData = null;
+  try {
+    const { data } = await supabase
+      .from('artist_profiles')
+      .select('description, afi_link') // ← ここを afi_link に変更
+      .eq('name', artistName)
+      .single();
+    profileData = data;
+  } catch (err) {
+    console.error('Supabase error (artist_profiles):', err);
   }
+
+  // ② ライブ一覧は静的スナップショット(events.json)から取得
+  const today = new Date().toISOString().split('T')[0];
+  const lives = loadEvents()
+    .filter(live => live.live_date >= today)
+    .sort((a, b) => a.live_date.localeCompare(b.live_date));
 
   // クライアント側でフィルタリング
   const filteredLives = (lives || []).filter(live => {

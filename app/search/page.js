@@ -1,46 +1,51 @@
-import supabase from '@/utils/supabase'
+import { loadEvents } from '@/utils/events'
 // ★修正: SearchPanel と groupArtists のインポートを削除（不要になったため）
 import { getCachedAIPickedShows } from '@/utils/recommend-engine'
 import { RecommendedShows } from '@/app/components/RecommendedShows'
 
 export const revalidate = 0;
 
+function matchesKeyword(live, keyword) {
+  const k = keyword.toLowerCase();
+  return (
+    (live.title || '').toLowerCase().includes(k) ||
+    (live.performers || '').toLowerCase().includes(k) ||
+    (live.venue || '').toLowerCase().includes(k) ||
+    (live.performers_kana || '').toLowerCase().includes(k)
+  );
+}
+
 export default async function SearchPage({ searchParams }) {
   const resolvedParams = await searchParams;
   const query = (resolvedParams.q || "").trim();
   const dateParam = resolvedParams.date || "";
   const today = new Date().toISOString().split('T')[0];
+  const events = loadEvents();
 
   // 1. 検索ロジック
   let results = [];
   if (query || dateParam) {
-    let supabaseQuery = supabase.from('lives').select('*');
+    // 日付検索 (AND条件)
+    if (dateParam) {
+      results = events.filter(live => live.live_date.startsWith(dateParam));
+    } else {
+      results = events.filter(live => live.live_date >= today);
+    }
 
     // キーワード検索 (OR条件)
     if (query) {
-      const orCondition = `title.ilike.%${query}%,performers.ilike.%${query}%,venue.ilike.%${query}%,performers_kana.ilike.%${query}%`;
-      supabaseQuery = supabaseQuery.or(orCondition);
+      results = results.filter(live => matchesKeyword(live, query));
     }
 
-    // 日付検索 (AND条件)
-    if (dateParam) {
-      supabaseQuery = supabaseQuery
-        .gte('live_date', `${dateParam}T00:00:00`)
-        .lte('live_date', `${dateParam}T23:59:59`);
-    } else {
-      supabaseQuery = supabaseQuery.gte('live_date', today);
-    }
-
-    const { data, error } = await supabaseQuery.order('live_date', { ascending: true });
-    if (!error) results = data || [];
+    results = [...results].sort((a, b) => a.live_date.localeCompare(b.live_date));
   }
 
   // 2. 0件時のAIレコメンド
   let recommendedShows = [];
   if (results.length === 0) {
     const nextWeekStr = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
-    const { data: candidates } = await supabase.from('lives').select('*').gte('live_date', nextWeekStr).limit(50);
-    recommendedShows = candidates ? await getCachedAIPickedShows(candidates) : [];
+    const candidates = events.filter(live => live.live_date >= nextWeekStr).slice(0, 50);
+    recommendedShows = candidates.length > 0 ? await getCachedAIPickedShows(candidates) : [];
   }
 
   // ★修正: SearchPanel用の「芸人データ取得処理」を丸ごと削除
