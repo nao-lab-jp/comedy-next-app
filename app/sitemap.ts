@@ -1,55 +1,47 @@
 import { MetadataRoute } from 'next'
-import { createClient } from '@supabase/supabase-js'
+import { loadArtistStats } from '@/utils/artistStats'
 
-// ▼ 環境変数 (セキュリティのため本番では必ず環境変数をご利用ください) ▼
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://aqtvkwtcjjegbmmsdyjn.supabase.co'
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFxdHZrd3RjamplZ2JtbXNkeWpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5MTQwODMsImV4cCI6MjA3OTQ5MDA4M30.dI5rMh18TyUsVbPLA4qIDa-ccnFPppoGDz7LJNhqOpU'
+// SEO-PLAN.md P0-3: sitemap.xml の自動生成
+// 以前はSupabaseのRPCをリクエスト毎に呼んでいたが、egressブロックで失敗し
+// トップページ1件しか出力されない状態になっていた。P0-1で導入した静的スナップショット
+// (artist-stats.json、スクレイパー実行時に事前生成)を読むだけにして、DBアクセスを無くす。
+//
+// 注意: generateSitemaps() で複数ファイルに分割すると配信URLが /sitemap/[id].xml に変わり、
+// 既存の robots.txt の `Sitemap: https://owarai-live.com/sitemap.xml` 宣言と合わなくなる。
+// 現状の芸人数はSitemapプロトコルの上限(50,000件/ファイル)に対して十分小さいため、
+// 単一ファイルのまま返す。上限に近づいたら分割方式(と robots.txt)を見直すこと。
+const baseUrl = 'https://owarai-live.com'
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+const STATIC_PAGES: {
+  path: string
+  changeFrequency: NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>
+  priority: number
+}[] = [
+  { path: '', changeFrequency: 'daily', priority: 1 },
+  { path: '/guide', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/contact', changeFrequency: 'yearly', priority: 0.3 },
+  { path: '/privacy', changeFrequency: 'yearly', priority: 0.3 },
+  { path: '/terms', changeFrequency: 'yearly', priority: 0.3 },
+]
 
-// 手順1で作った関数の戻り値の型定義
-type PerformerResult = {
-  performer_name: string
-}
+type ArtistStats = Record<string, { last_updated_at?: string | null }>
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://owarai-live.com'
+  const stats = loadArtistStats() as ArtistStats
 
-  // Supabaseの関数(RPC)を呼び出して、重複なしのリストを取得
-  const { data: performers, error } = await supabase
-    .rpc('get_unique_performers')
+  const artistEntries: MetadataRoute.Sitemap = Object.entries(stats).map(([name, data]) => ({
+    url: `${baseUrl}/artist/${encodeURIComponent(name)}`,
+    lastModified: data?.last_updated_at ? new Date(data.last_updated_at) : undefined,
+    changeFrequency: 'weekly',
+    priority: 0.8,
+  }))
 
-  if (error || !performers) {
-    console.error('Supabase fetch error:', error)
-    return [
-      {
-        url: baseUrl,
-        lastModified: new Date(),
-        changeFrequency: 'daily',
-        priority: 1,
-      },
-    ]
-  }
+  const staticEntries: MetadataRoute.Sitemap = STATIC_PAGES.map((p) => ({
+    url: `${baseUrl}${p.path}`,
+    lastModified: new Date(),
+    changeFrequency: p.changeFrequency,
+    priority: p.priority,
+  }))
 
-  // サイトマップ生成
-  const artistUrls: MetadataRoute.Sitemap = (performers as PerformerResult[]).map((p) => {
-    // ★修正ポイント: encodeURIComponent で日本語や記号を安全な文字コードに変換
-    // これにより "EntityRef: expecting ';'" エラーが解消されます
-    return {
-      url: `${baseUrl}/artist/${encodeURIComponent(p.performer_name)}`, 
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    }
-  })
-
-  return [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 1,
-    },
-    ...artistUrls,
-  ]
+  return [...staticEntries, ...artistEntries]
 }
