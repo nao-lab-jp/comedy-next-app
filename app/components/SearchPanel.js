@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function SearchPanel({ artistGroups }) {
   const router = useRouter();
@@ -18,10 +19,6 @@ export default function SearchPanel({ artistGroups }) {
     if (keyword) params.set('q', keyword); 
 
     router.push(`/search?${params.toString()}`);
-  };
-
-  const handleArtistClick = (name) => {
-    router.push(`/artist/${encodeURIComponent(name)}`);
   };
 
   return (
@@ -86,13 +83,13 @@ export default function SearchPanel({ artistGroups }) {
             // artist は { name: "...", kana: "..." } というオブジェクトなので、
             // artist.name で名前を取り出す必要があります。
             artistGroups[activeTab].map((artist) => (
-              <button
+              <Link
                 key={artist.name}
-                onClick={() => handleArtistClick(artist.name)}
+                href={`/artist/${encodeURIComponent(artist.name)}`}
                 className="text-left text-sm p-2 hover:bg-blue-50 text-blue-600 rounded transition truncate border border-transparent hover:border-blue-100"
               >
                 {artist.name}
-              </button>
+              </Link>
             ))
             // ▲▲▲ 修正終わり ▲▲▲
           ) : (

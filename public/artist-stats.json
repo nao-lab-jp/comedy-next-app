@@ -1,0 +1,36 @@
+{
+  "ケミカル幕府": {
+    "total_count": 47,
+    "top_venues": [
+      {"venue": "ルミネtheよしもと", "count": 12},
+      {"venue": "ヨシモト∞ホール", "count": 9},
+      {"venue": "渋谷よしもと劇場", "count": 5}
+    ],
+    "top_co_performers": [
+      {"name": "パンサー", "count": 6},
+      {"name": "ダイアン", "count": 4},
+      {"name": "さらば青春の光", "count": 3}
+    ],
+    "past": [
+      {"date": "2026-08-30", "venue": "ヨシモト∞ホール", "title": "定期ライブ vol.42", "source_url": "https://example.com/1", "ticket_status": "終了"},
+      {"date": "2026-07-15", "venue": "ルミネtheよしもと", "title": "定期ライブ vol.41", "source_url": "https://example.com/2", "ticket_status": "終了"}
+    ],
+    "last_appearance": {"date": "2026-08-30", "venue": "ヨシモト∞ホール"}
+  },
+  "サンプル芸人A": {
+    "total_count": 3,
+    "top_venues": [
+      {"venue": "渋谷よしもと劇場", "count": 2},
+      {"venue": "梅田花月", "count": 1}
+    ],
+    "top_co_performers": [
+      {"name": "堀川ランプ", "count": 1}
+    ],
+    "past": [
+      {"date": "2026-06-01", "venue": "渋谷よしもと劇場", "title": "若手ライブ", "source_url": "https://example.com/3", "ticket_status": "終了"},
+      {"date": "2026-03-10", "venue": "渋谷よしもと劇場", "title": "若手ライブ", "source_url": "https://example.com/4", "ticket_status": "終了"},
+      {"date": "2026-01-05", "venue": "梅田花月", "title": "正月特番ライブ", "source_url": "https://example.com/5", "ticket_status": "終了"}
+    ],
+    "last_appearance": {"date": "2026-06-01", "venue": "渋谷よしもと劇場"}
+  }
+}

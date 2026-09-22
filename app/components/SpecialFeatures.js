@@ -55,7 +55,7 @@ export default function SpecialFeatures() {
             {feature.artists.map((artist) => (
               <Link 
                 key={artist}
-                href={`/search?q=${encodeURIComponent(artist)}`} 
+                href={`/artist/${encodeURIComponent(artist)}`}
                 className="bg-white hover:bg-gray-100 text-gray-700 text-sm py-1.5 px-3 rounded-full border border-gray-200 transition-colors shadow-sm"
               >
                 {artist}

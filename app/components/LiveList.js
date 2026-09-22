@@ -37,8 +37,15 @@ export default function LiveList({ initialLives }) {
             </p>
             <p>📍 会場: {live.venue}</p>
             <p className="text-sm text-gray-500 mt-2 line-clamp-2">
-              出演: {Array.isArray(live.performers_clean) 
-                ? live.performers_clean.join(', ') 
+              出演: {Array.isArray(live.performers_clean) && live.performers_clean.length > 0
+                ? live.performers_clean.map((name, i) => (
+                    <span key={name}>
+                      {i > 0 && ' / '}
+                      <a href={`/artist/${encodeURIComponent(name)}`} className="text-blue-600 hover:underline">
+                        {name}
+                      </a>
+                    </span>
+                  ))
                 : live.performers}
             </p>
           </div>
