@@ -5,6 +5,17 @@ import { RecommendedShows } from '@/app/components/RecommendedShows'
 
 export const revalidate = 0;
 
+// SEO-PLAN.md P1-2: /artist/{name} と内容が重複するため noindex。
+// followを付けて検索結果ページ経由のリンクは辿らせる(ユーザー機能としては維持)。
+export async function generateMetadata() {
+  return {
+    robots: {
+      index: false,
+      follow: true,
+    },
+  };
+}
+
 function matchesKeyword(live, keyword) {
   const k = keyword.toLowerCase();
   return (

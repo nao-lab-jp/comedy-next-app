@@ -39,9 +39,15 @@ export async function generateMetadata({ params }) {
   const { name } = await params;
   const artistName = decodeURIComponent(name);
 
+  // SEO-PLAN.md P1-1: 過去も含めて出演実績が一件も無いページ(データ取得ミスで
+  // 生成された芸人名など)は実質中身が無いため noindex にする(ソフト404対策)。
+  const stats = loadArtistStats()[artistName];
+  const hasContent = (stats?.total_count ?? 0) > 0;
+
   return {
     title: `${artistName}のライブ予定・チケット検索`,
     description: `「${artistName}」が出演する東京のお笑いライブ情報まとめ。チケット予約やスケジュールを確認できます。`,
+    ...(hasContent ? {} : { robots: { index: false, follow: true } }),
     openGraph: {
       title: `${artistName}のライブ予定`,
       description: `${artistName}の出演ライブ情報をチェック！`,
