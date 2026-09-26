@@ -18,6 +18,21 @@ function formatFullDate(dateStr) {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
+// artist_profiles の description は、3,582件中2,912件が「現在調査中です」の
+// プレースホルダーのまま(2026-09-26時点)。中身が無いまま「紹介・見どころ」の枠だけ
+// 出すと、数千ページに同一の薄い重複コンテンツが並ぶことになるので表示しない。
+// URL Inspection APIで抽出調査したところ、プレースホルダーを出しているページの
+// インデックス率(25.5%)は、プロフィールが全く無いページ(37.5%)より低かった。
+function usableDescription(description) {
+  if (!description) return null;
+
+  const text = description.trim();
+  if (!text) return null;
+  if (text.length <= 40 && text.includes('調査中')) return null;
+
+  return text;
+}
+
 // SEO-PLAN.md P0-1: 芸人ごとに固有の1〜2行サマリーを作る。
 // 出演予定がある/なしで文言を出し分ける(0件パターンはソフト404対策にもなる)。
 function buildSummary(artistName, upcomingLives, stats) {
@@ -92,6 +107,7 @@ export default async function ArtistPage({ params }) {
 
   // ③ 過去の出演履歴・よく出演する会場・よく共演する芸人はスクレイパー側で事前集計した静的JSONから取得
   const stats = loadArtistStats()[artistName];
+  const description = usableDescription(profileData?.description);
   const summary = buildSummary(artistName, filteredLives, stats);
   const pastLives = stats?.past || [];
   const visiblePast = pastLives.slice(0, 10);
@@ -119,7 +135,7 @@ export default async function ArtistPage({ params }) {
         </p>
 
         {/* ▼ 紹介文があれば表示する */}
-        {profileData?.description && (
+        {description && (
           <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100 mb-8">
             <h3 className="font-bold text-gray-800 mb-2 border-b pb-2">
               {artistName}の紹介・見どころ
@@ -127,7 +143,7 @@ export default async function ArtistPage({ params }) {
 
             {/* whitespace-pre-wrapをつけているので、AIが作った改行も正しく表示されます */}
             <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
-              {profileData.description}
+              {description}
             </p>
           </div>
         )}
