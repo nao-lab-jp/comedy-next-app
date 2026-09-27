@@ -18,6 +18,43 @@ function formatFullDate(dateStr) {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
+// 出演者名の区切り文字。scraper側の clean_performers_strict() と揃えてある
+// (「・」は「ア・ダンチ！」のように名前の一部になるため区切りに含めない)。
+const PERFORMER_SEPARATORS = /[/／,、\n　 ]+/;
+const PARENTHESES = /[（(]([^）)]*)[）)]/g;
+
+// 以前はタイトル・会場・出演者を繋いだ文字列に対する部分一致で絞り込んでいたため、
+// 「スパイク」の一覧に「スパイクシンフォニー」の公演が混ざっていた。会場名やタイトルに
+// 芸人名が含まれるだけの公演(例:「六本木ピンセット」がピンセットの予定に出る)も拾っていた。
+// 出演者名を1件ずつ取り出して完全一致で判定する。過去の出演履歴を作っている
+// scraper側(publish_artist_stats.py)も performers_clean の完全一致なので、これで揃う。
+function performerNames(live) {
+  const raw = String(live.performers || '');
+  const candidates = [
+    // scraperが整形済みの配列。ただし「解答者：麒麟」のように役割ラベルが残ることがある
+    ...(live.performers_clean || []),
+    // 「粗品（霜降り明星）」の括弧内。分割前に取り出さないと括弧内の空白で切れてしまう
+    ...[...raw.matchAll(PARENTHESES)].map(m => m[1]),
+    ...raw.replace(PARENTHESES, ' ').split(PERFORMER_SEPARATORS),
+  ];
+
+  const names = new Set();
+  for (const candidate of candidates) {
+    const name = candidate.trim();
+    // 「スパイク...」のように元サイト側で省略された名前は、誰を指すか確定できないので使わない
+    if (!name || name.includes('...') || name.includes('…')) continue;
+
+    names.add(name);
+    for (const separator of ['：', ':']) {
+      if (name.includes(separator)) {
+        const tail = name.slice(name.lastIndexOf(separator) + 1).trim();
+        if (tail) names.add(tail);
+      }
+    }
+  }
+  return names;
+}
+
 // artist_profiles の description は、3,582件中2,912件が「現在調査中です」の
 // プレースホルダーのまま(2026-09-26時点)。中身が無いまま「紹介・見どころ」の枠だけ
 // 出すと、数千ページに同一の薄い重複コンテンツが並ぶことになるので表示しない。
@@ -94,16 +131,8 @@ export default async function ArtistPage({ params }) {
     .filter(live => live.live_date >= today)
     .sort((a, b) => a.live_date.localeCompare(b.live_date));
 
-  // クライアント側でフィルタリング
-  const filteredLives = (lives || []).filter(live => {
-    const target = `
-      ${live.title}
-      ${live.venue}
-      ${live.performers}
-      ${live.performers_kana || ''}
-    `.toLowerCase();
-    return target.includes(artistName.toLowerCase());
-  });
+  // 出演者名で厳密に絞り込む(performerNamesの実装を参照)
+  const filteredLives = (lives || []).filter(live => performerNames(live).has(artistName));
 
   // ③ 過去の出演履歴・よく出演する会場・よく共演する芸人はスクレイパー側で事前集計した静的JSONから取得
   const stats = loadArtistStats()[artistName];
