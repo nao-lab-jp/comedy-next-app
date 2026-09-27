@@ -189,67 +189,73 @@ export default async function ArtistPage({ params }) {
           {summary}
         </p>
 
-        {/* ▼ 紹介文があれば表示する */}
-        {description && (
+        {/* ▼ 紹介文と関連作品は1つの枠にまとめる。別枠にすると広告然として浮くため。
+            ただし景品表示法(ステマ規制)は「広告だと分かりにくいこと」自体を問題に
+            するので、見た目を馴染ませる代わりに「広告」ラベルと区切り線は必ず残す。 */}
+        {(description || products.length > 0) && (
           <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100 mb-8">
-            <h3 className="font-bold text-gray-800 mb-2 border-b pb-2">
-              {artistName}の紹介・見どころ
-            </h3>
+            {description && (
+              <>
+                <h3 className="font-bold text-gray-800 mb-2 border-b pb-2">
+                  {artistName}の紹介・見どころ
+                </h3>
 
-            {/* whitespace-pre-wrapをつけているので、AIが作った改行も正しく表示されます */}
-            <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
-              {description}
-            </p>
-          </div>
-        )}
+                {/* whitespace-pre-wrapをつけているので、AIが作った改行も正しく表示されます */}
+                <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
+                  {description}
+                </p>
+              </>
+            )}
 
-        {/* ▼ 商品が確認できている芸人のみ、具体的な作品名で表示する(最大2件)
-            商品画像はSiteStripeの画像リンク廃止(2024-01)によりPA-APIが必須で、
-            PA-APIは直近180日に3件の適格販売が要るため現状使えない。
-            代わりに種別アイコン・カード化・行ごとのCTAで視認性を出している。 */}
-        {products.length > 0 && (
-          <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100 mb-8">
-            <h3 className="font-bold text-gray-800 mb-3 border-b pb-2 text-sm">
-              {artistName}の関連作品
-              <span className="ml-2 text-[10px] font-normal text-gray-400 align-middle">広告</span>
-            </h3>
+            {/* 商品が確認できている芸人のみ、具体的な作品名で表示する(最大2件)
+                商品画像はSiteStripeの画像リンク廃止(2024-01)によりPA-APIが必須で、
+                PA-APIは直近180日に3件の適格販売が要るため現状使えない。
+                代わりに種別アイコン・カード化・行ごとのCTAで視認性を出している。 */}
+            {products.length > 0 && (
+              <div className={description ? 'mt-6 pt-5 border-t border-gray-100' : ''}>
+                <h3 className="font-bold text-gray-800 mb-3 text-sm">
+                  {artistName}の関連作品
+                  <span className="ml-2 text-[10px] font-normal text-gray-400 align-middle">広告</span>
+                </h3>
 
-            <ul className="space-y-3">
-              {products.map(product => {
-                const style = KIND_STYLES[product.kind] || KIND_STYLES.default;
-                return (
-                  <li key={product.asin}>
-                    <a
-                      href={amazonUrl(product.asin)}
-                      target="_blank"
-                      rel="sponsored noopener noreferrer"
-                      className="group flex items-center gap-3 rounded-lg border border-gray-200 p-3 transition-colors hover:border-orange-300 hover:bg-orange-50"
-                    >
-                      <span
-                        className={`shrink-0 w-14 h-14 rounded-md border flex flex-col items-center justify-center ${style.box}`}
-                      >
-                        <span className="text-xl leading-none">{style.icon}</span>
-                        <span className="mt-1 text-[10px] font-bold">{product.kind}</span>
-                      </span>
+                <ul className="space-y-3">
+                  {products.map(product => {
+                    const style = KIND_STYLES[product.kind] || KIND_STYLES.default;
+                    return (
+                      <li key={product.asin}>
+                        <a
+                          href={amazonUrl(product.asin)}
+                          target="_blank"
+                          rel="sponsored noopener noreferrer"
+                          className="group flex items-center gap-3 rounded-lg border border-gray-200 p-3 transition-colors hover:border-orange-300 hover:bg-orange-50"
+                        >
+                          <span
+                            className={`shrink-0 w-14 h-14 rounded-md border flex flex-col items-center justify-center ${style.box}`}
+                          >
+                            <span className="text-xl leading-none">{style.icon}</span>
+                            <span className="mt-1 text-[10px] font-bold">{product.kind}</span>
+                          </span>
 
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-gray-800 group-hover:text-orange-800">
-                          {product.title}
-                        </span>
-                        <span className="mt-1 inline-block text-xs font-bold text-orange-600">
-                          Amazonで見る →
-                        </span>
-                      </span>
-                    </a>
-                  </li>
-                );
-              })}
-            </ul>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-medium text-gray-800 group-hover:text-orange-800">
+                              {product.title}
+                            </span>
+                            <span className="mt-1 inline-block text-xs font-bold text-orange-600">
+                              Amazonで見る →
+                            </span>
+                          </span>
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
 
-            <p className="text-[10px] text-gray-400 mt-3">
-              ※Amazonのアソシエイトとして、当サイトは適格販売により収入を得ています。
-              価格・在庫はリンク先でご確認ください。
-            </p>
+                <p className="text-[10px] text-gray-400 mt-3">
+                  ※Amazonのアソシエイトとして、当サイトは適格販売により収入を得ています。
+                  価格・在庫はリンク先でご確認ください。
+                </p>
+              </div>
+            )}
           </div>
         )}
 
