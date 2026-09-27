@@ -33,6 +33,17 @@ function formatFullDate(dateStr) {
 
 // 出演者名の区切り文字。scraper側の clean_performers_strict() と揃えてある
 // (「・」は「ア・ダンチ！」のように名前の一部になるため区切りに含めない)。
+// 商品の種別ごとの見せ方。Amazonの商品画像は規約上使えないため、
+// アイコンと色で「何の商品か」を一目で分かるようにしている。
+const KIND_STYLES = {
+  'Kindle': { icon: '📖', box: 'bg-amber-50 border-amber-200 text-amber-800' },
+  '本': { icon: '📗', box: 'bg-blue-50 border-blue-200 text-blue-800' },
+  'DVD': { icon: '💿', box: 'bg-purple-50 border-purple-200 text-purple-800' },
+  'ビデオ': { icon: '▶️', box: 'bg-sky-50 border-sky-200 text-sky-800' },
+  'おもちゃ': { icon: '🧸', box: 'bg-pink-50 border-pink-200 text-pink-800' },
+  default: { icon: '🛒', box: 'bg-gray-50 border-gray-200 text-gray-700' },
+};
+
 const PERFORMER_SEPARATORS = /[/／,、\n　 ]+/;
 const PARENTHESES = /[（(]([^）)]*)[）)]/g;
 
@@ -192,30 +203,47 @@ export default async function ArtistPage({ params }) {
           </div>
         )}
 
-        {/* ▼ 商品が確認できている芸人のみ、具体的な作品名で表示する(最大2件) */}
+        {/* ▼ 商品が確認できている芸人のみ、具体的な作品名で表示する(最大2件)
+            商品画像はSiteStripeの画像リンク廃止(2024-01)によりPA-APIが必須で、
+            PA-APIは直近180日に3件の適格販売が要るため現状使えない。
+            代わりに種別アイコン・カード化・行ごとのCTAで視認性を出している。 */}
         {products.length > 0 && (
           <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100 mb-8">
             <h3 className="font-bold text-gray-800 mb-3 border-b pb-2 text-sm">
-              {artistName}の作品・関連書籍
+              {artistName}の関連作品
               <span className="ml-2 text-[10px] font-normal text-gray-400 align-middle">広告</span>
             </h3>
 
-            <ul className="space-y-2">
-              {products.map(product => (
-                <li key={product.asin}>
-                  <a
-                    href={amazonUrl(product.asin)}
-                    target="_blank"
-                    rel="sponsored noopener noreferrer"
-                    className="flex items-start gap-2 text-sm text-blue-600 hover:underline"
-                  >
-                    <span className="shrink-0 mt-0.5 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold">
-                      {product.kind}
-                    </span>
-                    <span>{product.title}</span>
-                  </a>
-                </li>
-              ))}
+            <ul className="space-y-3">
+              {products.map(product => {
+                const style = KIND_STYLES[product.kind] || KIND_STYLES.default;
+                return (
+                  <li key={product.asin}>
+                    <a
+                      href={amazonUrl(product.asin)}
+                      target="_blank"
+                      rel="sponsored noopener noreferrer"
+                      className="group flex items-center gap-3 rounded-lg border border-gray-200 p-3 transition-colors hover:border-orange-300 hover:bg-orange-50"
+                    >
+                      <span
+                        className={`shrink-0 w-14 h-14 rounded-md border flex flex-col items-center justify-center ${style.box}`}
+                      >
+                        <span className="text-xl leading-none">{style.icon}</span>
+                        <span className="mt-1 text-[10px] font-bold">{product.kind}</span>
+                      </span>
+
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium text-gray-800 group-hover:text-orange-800">
+                          {product.title}
+                        </span>
+                        <span className="mt-1 inline-block text-xs font-bold text-orange-600">
+                          Amazonで見る →
+                        </span>
+                      </span>
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
 
             <p className="text-[10px] text-gray-400 mt-3">

@@ -62,7 +62,7 @@ export const AMAZON_PRODUCTS = {
   ],
   // マーケットプレイス出品のため在庫が切れやすい。切れていたら外すこと。
   'くまだまさし': [
-    { asin: 'B0GQBV5N3V', kind: '文房具', title: 'くまだまさし自由帳' },
+    { asin: 'B0GQBV5N3V', kind: 'おもちゃ', title: 'くまだまさし自由帳' },
   ],
 };
 
