@@ -11,6 +11,13 @@ import LiveList from '@/app/components/LiveList';
 // artist_profiles のSupabase参照も毎回発生しなくなるため、egress対策にもなる。
 export const revalidate = 86400;
 
+// 動的セグメントは generateStaticParams が無いとISRに載らず、revalidateを指定しても
+// 毎リクエスト描画される(ビルド出力で ƒ Dynamic と判定される)。
+// 空配列を返してビルド時の事前生成は行わず、アクセスされたものだけ描画してキャッシュする。
+export async function generateStaticParams() {
+  return [];
+}
+
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
 function formatShortDateWithWeekday(dateStr) {
