@@ -4,7 +4,12 @@ import { loadEvents } from '@/utils/events';
 import { loadArtistStats } from '@/utils/artistStats';
 import LiveList from '@/app/components/LiveList';
 
-export const revalidate = 0;
+// 以前は revalidate = 0 で毎リクエスト描画していたため、2,900ページ超をGooglebotが
+// クロールするたびに関数が起動し、Vercelの無料枠(Fluid Active CPU 4時間)を圧迫していた。
+// 表示内容が変わるのはスクレイパーがpushして再デプロイされたときだけ(再デプロイで
+// キャッシュは破棄される)なので、長めにキャッシュして問題ない。
+// artist_profiles のSupabase参照も毎回発生しなくなるため、egress対策にもなる。
+export const revalidate = 86400;
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
