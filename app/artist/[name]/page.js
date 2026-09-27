@@ -3,6 +3,7 @@ import supabase from '@/utils/supabase';
 import { loadEvents } from '@/utils/events';
 import { loadArtistStats } from '@/utils/artistStats';
 import LiveList from '@/app/components/LiveList';
+import { amazonUrl, productsFor } from './amazonProducts';
 
 // 以前は revalidate = 0 で毎リクエスト描画していたため、2,900ページ超をGooglebotが
 // クロールするたびに関数が起動し、Vercelの無料枠(Fluid Active CPU 4時間)を圧迫していた。
@@ -123,13 +124,14 @@ export default async function ArtistPage({ params }) {
   const { name } = await params;
   const artistName = decodeURIComponent(name);
 
-  // ▼ ① Supabaseから芸人のプロフィールと、アフィリエイトリンク（afi_link）を取得
+  // ▼ ① Supabaseから芸人の紹介文を取得
   // egress超過でAPIがブロックされている間は失敗しうるので、落とさず握りつぶす
+  // (afi_link は amazonProducts.js に移したのでもう読まない)
   let profileData = null;
   try {
     const { data } = await supabase
       .from('artist_profiles')
-      .select('description, afi_link') // ← ここを afi_link に変更
+      .select('description')
       .eq('name', artistName)
       .single();
     profileData = data;
@@ -149,6 +151,7 @@ export default async function ArtistPage({ params }) {
   // ③ 過去の出演履歴・よく出演する会場・よく共演する芸人はスクレイパー側で事前集計した静的JSONから取得
   const stats = loadArtistStats()[artistName];
   const description = usableDescription(profileData?.description);
+  const products = productsFor(artistName);
   const summary = buildSummary(artistName, filteredLives, stats);
   const pastLives = stats?.past || [];
   const visiblePast = pastLives.slice(0, 10);
@@ -189,22 +192,35 @@ export default async function ArtistPage({ params }) {
           </div>
         )}
 
-        {/* ▼ afi_link に値がある芸人のみAmazonボタンを表示 */}
-        {profileData?.afi_link && (
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-8 text-center">
-            <h4 className="font-bold text-gray-800 text-sm mb-3">
-              📺 {artistName} の出演・関連作品をチェック！
-            </h4>
-            <a
-              href={profileData.afi_link} // ← ここを afi_link に変更
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block bg-[#FF9900] hover:bg-[#E38800] text-white font-bold px-6 py-3 rounded-lg shadow-md transition-colors text-sm"
-            >
-              ▶ Amazonプライムビデオ（無料体験あり）で見る
-            </a>
-            <p className="text-[10px] text-gray-400 mt-2">
-              ※時期により配信内容が異なる場合があります。リンク先でご確認ください。
+        {/* ▼ 商品が確認できている芸人のみ、具体的な作品名で表示する(最大2件) */}
+        {products.length > 0 && (
+          <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-100 mb-8">
+            <h3 className="font-bold text-gray-800 mb-3 border-b pb-2 text-sm">
+              {artistName}の作品・関連書籍
+              <span className="ml-2 text-[10px] font-normal text-gray-400 align-middle">広告</span>
+            </h3>
+
+            <ul className="space-y-2">
+              {products.map(product => (
+                <li key={product.asin}>
+                  <a
+                    href={amazonUrl(product.asin)}
+                    target="_blank"
+                    rel="sponsored noopener noreferrer"
+                    className="flex items-start gap-2 text-sm text-blue-600 hover:underline"
+                  >
+                    <span className="shrink-0 mt-0.5 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold">
+                      {product.kind}
+                    </span>
+                    <span>{product.title}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+
+            <p className="text-[10px] text-gray-400 mt-3">
+              ※Amazonのアソシエイトとして、当サイトは適格販売により収入を得ています。
+              価格・在庫はリンク先でご確認ください。
             </p>
           </div>
         )}
