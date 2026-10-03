@@ -2,6 +2,7 @@
 import supabase from '@/utils/supabase';
 import { loadEvents } from '@/utils/events';
 import { loadArtistStats } from '@/utils/artistStats';
+import { displayVenue } from '@/utils/venue';
 import LiveList from '@/app/components/LiveList';
 import { amazonUrl, productsFor } from './amazonProducts';
 
@@ -101,11 +102,11 @@ function buildSummary(artistName, upcomingLives, stats) {
 
   if (upcomingLives.length > 0) {
     const next = upcomingLives[0];
-    return `${artistName}の次回出演は${formatShortDateWithWeekday(next.live_date)}${next.venue}。今後の予定${upcomingLives.length}件、過去を含めて${totalCount}件を掲載しています。`;
+    return `${artistName}の次回出演は${formatShortDateWithWeekday(next.live_date)}${displayVenue(next.venue)}。今後の予定${upcomingLives.length}件、過去を含めて${totalCount}件を掲載しています。`;
   }
 
   if (stats?.last_appearance) {
-    return `${artistName}の今後の出演予定は現在掲載がありません。直近の出演は${formatFullDate(stats.last_appearance.date)}（${stats.last_appearance.venue}）でした。過去を含めて${totalCount}件を掲載しています。`;
+    return `${artistName}の今後の出演予定は現在掲載がありません。直近の出演は${formatFullDate(stats.last_appearance.date)}${displayVenue(stats.last_appearance.venue) ? `（${displayVenue(stats.last_appearance.venue)}）` : ''}でした。過去を含めて${totalCount}件を掲載しています。`;
   }
 
   return `${artistName}の今後の出演予定は現在掲載がありません。`;
@@ -315,7 +316,7 @@ export default async function ArtistPage({ params }) {
               {visiblePast.map((live, i) => (
                 <li key={`${live.date}-${i}`} className="bg-white p-3 rounded-lg border border-gray-100 text-sm text-gray-600">
                   <span className="text-gray-400 mr-2">{live.date}</span>
-                  {live.venue}{live.title ? ` - ${live.title}` : ''}
+                  {[displayVenue(live.venue), live.title].filter(Boolean).join(' - ')}
                 </li>
               ))}
             </ul>
@@ -329,7 +330,7 @@ export default async function ArtistPage({ params }) {
                   {hiddenPast.map((live, i) => (
                     <li key={`${live.date}-${i}`} className="bg-white p-3 rounded-lg border border-gray-100 text-sm text-gray-600">
                       <span className="text-gray-400 mr-2">{live.date}</span>
-                      {live.venue}{live.title ? ` - ${live.title}` : ''}
+                      {[displayVenue(live.venue), live.title].filter(Boolean).join(' - ')}
                     </li>
                   ))}
                 </ul>

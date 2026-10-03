@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { displayVenue } from '@/utils/venue'
 
 export default function LiveList({ initialLives }) {
   // ※ここは、もしSearchPanel側でリスト表示も兼ねているなら不要ですが、
@@ -35,7 +36,7 @@ export default function LiveList({ initialLives }) {
                   hour: '2-digit', minute: '2-digit', weekday: 'short' 
               })}
             </p>
-            <p>📍 会場: {live.venue}</p>
+            {displayVenue(live.venue) && <p>📍 会場: {displayVenue(live.venue)}</p>}
             <p className="text-sm text-gray-500 mt-2 line-clamp-2">
               出演: {Array.isArray(live.performers_clean) && live.performers_clean.length > 0
                 ? live.performers_clean.map((name, i) => (
