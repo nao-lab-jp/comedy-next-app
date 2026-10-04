@@ -2,6 +2,9 @@ import { loadEvents } from '@/utils/events'
 // ★修正: SearchPanel と groupArtists のインポートを削除（不要になったため）
 import { getCachedAIPickedShows } from '@/utils/recommend-engine'
 import { RecommendedShows } from '@/app/components/RecommendedShows'
+import { areaBySlug, areaOf } from '@/utils/area'
+import { displayVenue } from '@/utils/venue'
+import { jstToday } from '@/utils/jst'
 
 export const revalidate = 0;
 
@@ -30,17 +33,24 @@ export default async function SearchPage({ searchParams }) {
   const resolvedParams = await searchParams;
   const query = (resolvedParams.q || "").trim();
   const dateParam = resolvedParams.date || "";
-  const today = new Date().toISOString().split('T')[0];
+  // 知らない slug は無視する(エリア無しで検索したのと同じ扱い)
+  const area = areaBySlug(resolvedParams.area || "");
+  const today = jstToday();
   const events = loadEvents();
 
   // 1. 検索ロジック
   let results = [];
-  if (query || dateParam) {
+  if (query || dateParam || area) {
     // 日付検索 (AND条件)
     if (dateParam) {
       results = events.filter(live => live.live_date.startsWith(dateParam));
     } else {
       results = events.filter(live => live.live_date >= today);
+    }
+
+    // エリア (AND条件)
+    if (area) {
+      results = results.filter(live => areaOf(live.venue) === area.slug);
     }
 
     // キーワード検索 (OR条件)
@@ -69,6 +79,7 @@ export default async function SearchPage({ searchParams }) {
           <a href="/" className="text-blue-100 hover:text-white text-sm mb-4 inline-block font-bold">← トップへ戻る</a>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             {dateParam && <span className="bg-blue-700 px-2 py-1 rounded text-lg">📅 {dateParam}</span>}
+            {area && <span className="bg-blue-700 px-2 py-1 rounded text-lg">📍 {area.name}</span>}
             {query ? `「${query}」の検索結果` : 'ライブ検索結果'}
           </h1>
           <p className="text-blue-100 text-sm mt-3 ml-1 font-medium">{results.length} 件見つかりました</p>
@@ -92,7 +103,9 @@ export default async function SearchPage({ searchParams }) {
                   </div>
                   <h3 className="text-blue-600 font-bold text-lg mb-4 leading-tight">{show.title}</h3>
                   <div className="text-sm text-gray-700 space-y-2">
-                    <p className="flex items-center gap-2"><span className="text-gray-400">📍</span> {show.venue}</p>
+                    {displayVenue(show.venue) && (
+                      <p className="flex items-center gap-2"><span className="text-gray-400">📍</span> {displayVenue(show.venue)}</p>
+                    )}
                     <p className="flex items-start gap-2">
                       <span className="text-gray-400 mt-0.5">👥</span>
                       <span className="line-clamp-2">{show.performers}</span>

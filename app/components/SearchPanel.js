@@ -3,20 +3,29 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { AREAS } from '@/utils/area'
 
 export default function SearchPanel({ artistGroups }) {
   const router = useRouter();
   const [date, setDate] = useState('');
   const [keyword, setKeyword] = useState('');
+  const [area, setArea] = useState('');
   const [activeTab, setActiveTab] = useState('あ行');
 
   // 検索ボタンを押したときの処理
   const handleSearchClick = () => {
+    // エリアだけ選ばれている場合は、検索結果(noindex)ではなくエリアページへ
+    if (area && !date && !keyword) {
+      router.push(`/area/${area}`);
+      return;
+    }
+
     const params = new URLSearchParams();
     if (date) params.set('date', date);
     
     // パラメータ名を 'q' に統一
     if (keyword) params.set('q', keyword); 
+    if (area) params.set('area', area);
 
     router.push(`/search?${params.toString()}`);
   };
@@ -41,6 +50,28 @@ export default function SearchPanel({ artistGroups }) {
           onChange={(e) => setDate(e.target.value)}
           className="w-full p-3 bg-gray-50 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-200 transition text-gray-800"
         />
+      </div>
+
+      {/* エリア選択 */}
+      <div className="mb-6">
+        <h3 className="text-lg font-bold text-gray-700 mb-2">📍 エリアで探す</h3>
+        <div className="flex flex-wrap gap-2">
+          {AREAS.map((a) => (
+            <button
+              key={a.slug}
+              type="button"
+              onClick={() => setArea(area === a.slug ? '' : a.slug)}
+              aria-pressed={area === a.slug}
+              className={`text-sm py-1.5 px-3 rounded-full border transition ${
+                area === a.slug
+                  ? 'bg-red-500 text-white border-red-500'
+                  : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+              }`}
+            >
+              {a.name}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* キーワード入力 */}

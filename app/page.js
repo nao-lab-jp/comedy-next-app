@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import SearchPanel from './components/SearchPanel'
 import SpecialFeatures from './components/SpecialFeatures'
+import BrowseLinks from './components/BrowseLinks'
 import { groupArtists } from '../utils/artistHelper'
 import { loadEvents } from '../utils/events'
 import { getCachedAIPickedShows } from '../utils/recommend-engine'
@@ -52,6 +53,9 @@ export default async function Home() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4">
+        {/* 今日・明日・今週末、エリア別ページへの入口 */}
+        <BrowseLinks />
+
         <SearchPanel artistGroups={artistGroups} />
 
         {/* 特集エリア */}

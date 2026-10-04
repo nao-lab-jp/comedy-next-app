@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { loadArtistStats } from '@/utils/artistStats'
+import { AREAS } from '@/utils/area'
 
 // SEO-PLAN.md P0-3: sitemap.xml の自動生成
 // 以前はSupabaseのRPCをリクエスト毎に呼んでいたが、egressブロックで失敗し
@@ -31,6 +32,12 @@ const STATIC_PAGES: {
   priority: number
 }[] = [
   { path: '', changeFrequency: 'daily', priority: 1 },
+  // 日付別ページ。中身は毎日入れ替わる
+  { path: '/today', changeFrequency: 'daily', priority: 0.9 },
+  { path: '/tomorrow', changeFrequency: 'daily', priority: 0.9 },
+  { path: '/weekend', changeFrequency: 'daily', priority: 0.9 },
+  // エリア別ページ
+  ...AREAS.map(area => ({ path: `/area/${area.slug}`, changeFrequency: 'daily' as const, priority: 0.8 })),
   { path: '/guide', changeFrequency: 'monthly', priority: 0.5 },
   { path: '/contact', changeFrequency: 'yearly', priority: 0.3 },
   { path: '/privacy', changeFrequency: 'yearly', priority: 0.3 },
