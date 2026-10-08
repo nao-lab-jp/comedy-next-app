@@ -1,3 +1,40 @@
+# SEO分析ツール・データ収集系のクローラーは拒否する。
+# このサイトに検索流入をもたらさない一方で、芸人ページ(6,000件超)を大量に
+# 描画させ、VercelのFluid Active CPU無料枠(4時間/直近30日、超過で30日停止)を圧迫するため。
+# Google・Bing・AI検索系は対象外。
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: DataForSeoBot
+Disallow: /
+
+User-agent: serpstatbot
+Disallow: /
+
+User-agent: Barkrowler
+Disallow: /
+
+User-agent: MegaIndex.ru
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
 User-agent: *
 Allow: /
 

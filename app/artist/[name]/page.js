@@ -11,7 +11,11 @@ import { amazonUrl, productsFor } from './amazonProducts';
 // 表示内容が変わるのはスクレイパーがpushして再デプロイされたときだけ(再デプロイで
 // キャッシュは破棄される)なので、長めにキャッシュして問題ない。
 // artist_profiles のSupabase参照も毎回発生しなくなるため、egress対策にもなる。
-export const revalidate = 86400;
+//
+// 2026-10-08: 1日 → 2日に延長。スクレイパーは2日おきにpushして再デプロイ(=全キャッシュ
+// 破棄)されるので、1日だと次のデプロイまでに1回余分に描き直していた。Fluid Active CPU が
+// 直近30日で 3時間54分/4時間に達しており(超過すると30日間停止)、描画回数を減らす必要があった。
+export const revalidate = 172800;
 
 // 動的セグメントは generateStaticParams が無いとISRに載らず、revalidateを指定しても
 // 毎リクエスト描画される(ビルド出力で ƒ Dynamic と判定される)。
@@ -78,6 +82,25 @@ function performerNames(live) {
     }
   }
   return names;
+}
+
+// 出演者名 → 公演 の索引。以前は描画のたびに全公演(約2,100件)の出演者名を解析しており、
+// それだけで1回22msかかっていた(実測)。インスタンスごとに一度だけ作れば以降は0.0004ms。
+// events.json は再デプロイでしか変わらないので、索引が古くなることはない。
+let livesByPerformer = null;
+
+function livesOf(artistName) {
+  if (!livesByPerformer) {
+    livesByPerformer = new Map();
+    const sorted = [...loadEvents()].sort((a, b) => a.live_date.localeCompare(b.live_date));
+    for (const live of sorted) {
+      for (const name of performerNames(live)) {
+        if (!livesByPerformer.has(name)) livesByPerformer.set(name, []);
+        livesByPerformer.get(name).push(live);
+      }
+    }
+  }
+  return livesByPerformer.get(artistName) || [];
 }
 
 // artist_profiles の description は、3,582件中2,912件が「現在調査中です」の
@@ -151,14 +174,9 @@ export default async function ArtistPage({ params }) {
     console.error('Supabase error (artist_profiles):', err);
   }
 
-  // ② ライブ一覧は静的スナップショット(events.json)から取得
+  // ② ライブ一覧は静的スナップショット(events.json)から、出演者名の索引で引く
   const today = new Date().toISOString().split('T')[0];
-  const lives = loadEvents()
-    .filter(live => live.live_date >= today)
-    .sort((a, b) => a.live_date.localeCompare(b.live_date));
-
-  // 出演者名で厳密に絞り込む(performerNamesの実装を参照)
-  const filteredLives = (lives || []).filter(live => performerNames(live).has(artistName));
+  const filteredLives = livesOf(artistName).filter(live => live.live_date >= today);
 
   // ③ 過去の出演履歴・よく出演する会場・よく共演する芸人はスクレイパー側で事前集計した静的JSONから取得
   const stats = loadArtistStats()[artistName];
