@@ -1,26 +1,33 @@
-import fs from 'fs'
-import path from 'path'
+import { cache } from 'react'
+import { restGet } from './supabaseRest'
 
-// SEO-PLAN.md P0-1: スクレイパー実行時に生成された芸人別集計データ(過去の出演履歴・
-// よく出演する会場・よく共演する芸人)を読む。events.jsonと同じく静的JSON参照でegressを避ける。
+// 芸人ページ1枚分のデータ(過去の出演履歴・よく出演する会場・よく共演する芸人と、
+// 今後の出演予定)。スクレイパーが artist_pages テーブルに芸人1組1行で書き込む
+// (comedy-scraper/publish_site_data.py)。
 //
-// このJSONは12MBを超えており、読み直すたびに約180msのCPUを使う。芸人ページは
-// generateMetadata とページ本体の2回呼ぶので、キャッシュしないと1リクエストで360msかかる。
-// Vercelの無料枠(Fluid Active CPU 4時間)を使い切る主因になっていたため、プロセス内に保持する。
+// 以前は全芸人分の artist-stats.json(15MB)をデプロイに含めて読んでいたが、
+// スクレイパーのpushによる再デプロイでISRキャッシュが全て捨てられ、ISR Writesの
+// 無料枠を超えたため、データをデプロイから切り離した。描画時はその芸人の1行(数KB)だけ読む。
 //
-// 中身が変わるのはスクレイパーがGitHubにpushしたときだけで、その度にVercelが再デプロイして
-// 新しいインスタンスになるため、キャッシュが古いまま残ることはない。
-let cached = null
+// generateMetadata とページ本体で同じ行を使うので、1回の描画につき1回だけ取りに行く。
+export const loadArtistPage = cache(async (name) => {
+  const rows = await restGet(
+    `artist_pages?name=eq.${encodeURIComponent(name)}&select=data`
+  )
+  return rows[0]?.data ?? null
+})
 
-export function loadArtistStats() {
-  if (cached) return cached
+// sitemap.xml 用。出演実績が minCount 件以上の芸人名と最終更新日時
+const PAGE_SIZE = 1000
 
-  const filePath = path.join(process.cwd(), 'public', 'artist-stats.json')
-  try {
-    cached = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-    return cached
-  } catch {
-    // 読めなかった場合はキャッシュしない(次回の呼び出しでやり直せるようにする)
-    return {}
+export async function listArtistsForSitemap(minCount) {
+  const artists = []
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const rows = await restGet(
+      `artist_pages?select=name,last_updated_at&total_count=gte.${minCount}` +
+      `&order=name.asc&limit=${PAGE_SIZE}&offset=${offset}`
+    )
+    artists.push(...rows)
+    if (rows.length < PAGE_SIZE) return artists
   }
 }

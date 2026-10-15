@@ -10,7 +10,7 @@ function weekendLabel(dates) {
 
 export async function generateMetadata() {
   const dates = weekendDates();
-  const count = eventsOn(dates).length;
+  const count = (await eventsOn(dates)).length;
   return {
     title: `今週末 ${weekendLabel(dates)}の東京お笑いライブ一覧`,
     description: `今週末${weekendLabel(dates)}に東京で開催されるお笑いライブ${count}件の一覧。土日のお笑いライブを会場・出演者からまとめて探せます。`,

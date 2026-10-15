@@ -6,7 +6,7 @@ export const revalidate = 600;
 
 export async function generateMetadata() {
   const tomorrow = addDays(jstToday(), 1);
-  const count = eventsOn([tomorrow]).length;
+  const count = (await eventsOn([tomorrow])).length;
   return {
     title: `明日 ${formatMonthDay(tomorrow)}の東京お笑いライブ一覧`,
     description: `明日${formatMonthDay(tomorrow)}に東京で開催されるお笑いライブ${count}件の一覧。会場・出演者・チケット情報をまとめています。`,

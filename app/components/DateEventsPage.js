@@ -6,9 +6,9 @@ import { eventDate } from '@/utils/jst';
 import EventCards from './EventCards';
 import BrowseLinks from './BrowseLinks';
 
-export function eventsOn(dates) {
+export async function eventsOn(dates) {
   const wanted = new Set(dates);
-  return loadEvents()
+  return (await loadEvents())
     .filter(live => wanted.has(eventDate(live)))
     .sort((a, b) => a.live_date.localeCompare(b.live_date));
 }
@@ -22,8 +22,8 @@ function countByArea(lives) {
   return AREAS.filter(a => counts.has(a.slug)).map(a => [a, counts.get(a.slug)]);
 }
 
-export default function DateEventsPage({ heading, lead, dates, current }) {
-  const lives = eventsOn(dates);
+export default async function DateEventsPage({ heading, lead, dates, current }) {
+  const lives = await eventsOn(dates);
   const byArea = countByArea(lives);
   // 1日だけのページは検索のエリア絞り込みへ、複数日(週末)はエリアページへ飛ばす
   const areaHref = area =>

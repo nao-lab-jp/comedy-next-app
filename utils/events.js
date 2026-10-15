@@ -1,16 +1,39 @@
-import fs from 'fs'
-import path from 'path'
+import { restGet } from './supabaseRest'
 
-// Supabase egress超過に伴う緊急措置: DBから生成した静的スナップショットを読む
+// 今後の公演一覧(スクレイパーが site_snapshots テーブルの key='events' に書き込む)。
 //
-// artist-stats.json と同じ理由でプロセス内にキャッシュする(こちらは1.1MBで約20ms)。
-// 更新はスクレイパーのpush起点の再デプロイ時のみ。
-let cached = null
+// 2026-10-15まではスクレイパーが public/events.json をpushして再デプロイしていたが、
+// 再デプロイのたびにISRキャッシュが全て捨てられ、ISR Writesの無料枠を超えたため
+// データをデプロイから切り離した(comedy-scraper/publish_site_data.py 参照)。
+//
+// 本体は約1.5MBあるので、プロセス内に保持して版(version)が変わった時だけ読み直す。
+// 版の確認は毎回行う(数十バイト)。スクレイパーは書き込み後に再生成を依頼するので、
+// ここで古い版を返すとその古い内容がキャッシュされてしまうため。
+let cached = { version: null, events: null }
+let loading = null
 
-export function loadEvents() {
-  if (cached) return cached
+async function fetchLatest() {
+  const [head] = await restGet('site_snapshots?key=eq.events&select=version')
+  if (!head) throw new Error('site_snapshots に events がありません')
+  if (cached.events && cached.version === head.version) return cached.events
 
-  const filePath = path.join(process.cwd(), 'public', 'events.json')
-  cached = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-  return cached
+  const [row] = await restGet('site_snapshots?key=eq.events&select=version,body')
+  cached = { version: row.version, events: row.body }
+  return cached.events
+}
+
+export async function loadEvents() {
+  // 同時に描画されたページで本体を重複して取りに行かない
+  if (!loading) loading = fetchLatest().finally(() => { loading = null })
+  try {
+    return await loading
+  } catch (err) {
+    // Supabaseに繋がらない間は手元の版で描く。手元にも無ければエラーにして、
+    // VercelがISRの古いページを出し続けるようにする(空の一覧をキャッシュさせない)
+    if (cached.events) {
+      console.error('公演一覧の取得に失敗したため、保持している版で描画します:', err)
+      return cached.events
+    }
+    throw err
+  }
 }

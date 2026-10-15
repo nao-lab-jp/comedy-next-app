@@ -17,7 +17,7 @@ export default async function Home() {
   nextWeekStart.setDate(nextWeekStart.getDate() + 7);
   const nextWeekStr = nextWeekStart.toISOString().split('T')[0];
 
-  const events = loadEvents();
+  const events = await loadEvents();
 
   // 1. 芸人リスト作成用の全データ取得
   const allLives = events.filter(live => live.live_date >= today);

@@ -1,21 +1,19 @@
 // app/artist/[name]/page.js
 import supabase from '@/utils/supabase';
-import { loadEvents } from '@/utils/events';
-import { loadArtistStats } from '@/utils/artistStats';
+import { loadArtistPage } from '@/utils/artistStats';
+import { jstToday } from '@/utils/jst';
 import { displayVenue } from '@/utils/venue';
 import LiveList from '@/app/components/LiveList';
 import { amazonUrl, productsFor } from './amazonProducts';
 
 // 以前は revalidate = 0 で毎リクエスト描画していたため、2,900ページ超をGooglebotが
 // クロールするたびに関数が起動し、Vercelの無料枠(Fluid Active CPU 4時間)を圧迫していた。
-// 表示内容が変わるのはスクレイパーがpushして再デプロイされたときだけ(再デプロイで
-// キャッシュは破棄される)なので、長めにキャッシュして問題ない。
-// artist_profiles のSupabase参照も毎回発生しなくなるため、egress対策にもなる。
 //
-// 2026-10-08: 1日 → 2日に延長。スクレイパーは2日おきにpushして再デプロイ(=全キャッシュ
-// 破棄)されるので、1日だと次のデプロイまでに1回余分に描き直していた。Fluid Active CPU が
-// 直近30日で 3時間54分/4時間に達しており(超過すると30日間停止)、描画回数を減らす必要があった。
-export const revalidate = 172800;
+// 2026-10-15: データ(artist_pages)をデプロイから切り離し、中身が変わった芸人だけ
+// スクレイパーが /api/revalidate で再生成させるようにした。過去の公演が「今後の予定」から
+// 外れるのもスクレイパー実行時(出演履歴が増えて中身が変わる)に拾われるので、
+// 時間経過による再生成は保険として7日にしている。
+export const revalidate = 604800;
 
 // 動的セグメントは generateStaticParams が無いとISRに載らず、revalidateを指定しても
 // 毎リクエスト描画される(ビルド出力で ƒ Dynamic と判定される)。
@@ -36,8 +34,6 @@ function formatFullDate(dateStr) {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
-// 出演者名の区切り文字。scraper側の clean_performers_strict() と揃えてある
-// (「・」は「ア・ダンチ！」のように名前の一部になるため区切りに含めない)。
 // 商品の種別ごとの見せ方。Amazonの商品画像は規約上使えないため、
 // アイコンと色で「何の商品か」を一目で分かるようにしている。
 const KIND_STYLES = {
@@ -48,60 +44,6 @@ const KIND_STYLES = {
   'おもちゃ': { icon: '🧸', box: 'bg-pink-50 border-pink-200 text-pink-800' },
   default: { icon: '🛒', box: 'bg-gray-50 border-gray-200 text-gray-700' },
 };
-
-const PERFORMER_SEPARATORS = /[/／,、\n　 ]+/;
-const PARENTHESES = /[（(]([^）)]*)[）)]/g;
-
-// 以前はタイトル・会場・出演者を繋いだ文字列に対する部分一致で絞り込んでいたため、
-// 「スパイク」の一覧に「スパイクシンフォニー」の公演が混ざっていた。会場名やタイトルに
-// 芸人名が含まれるだけの公演(例:「六本木ピンセット」がピンセットの予定に出る)も拾っていた。
-// 出演者名を1件ずつ取り出して完全一致で判定する。過去の出演履歴を作っている
-// scraper側(publish_artist_stats.py)も performers_clean の完全一致なので、これで揃う。
-function performerNames(live) {
-  const raw = String(live.performers || '');
-  const candidates = [
-    // scraperが整形済みの配列。ただし「解答者：麒麟」のように役割ラベルが残ることがある
-    ...(live.performers_clean || []),
-    // 「粗品（霜降り明星）」の括弧内。分割前に取り出さないと括弧内の空白で切れてしまう
-    ...[...raw.matchAll(PARENTHESES)].map(m => m[1]),
-    ...raw.replace(PARENTHESES, ' ').split(PERFORMER_SEPARATORS),
-  ];
-
-  const names = new Set();
-  for (const candidate of candidates) {
-    const name = candidate.trim();
-    // 「スパイク...」のように元サイト側で省略された名前は、誰を指すか確定できないので使わない
-    if (!name || name.includes('...') || name.includes('…')) continue;
-
-    names.add(name);
-    for (const separator of ['：', ':']) {
-      if (name.includes(separator)) {
-        const tail = name.slice(name.lastIndexOf(separator) + 1).trim();
-        if (tail) names.add(tail);
-      }
-    }
-  }
-  return names;
-}
-
-// 出演者名 → 公演 の索引。以前は描画のたびに全公演(約2,100件)の出演者名を解析しており、
-// それだけで1回22msかかっていた(実測)。インスタンスごとに一度だけ作れば以降は0.0004ms。
-// events.json は再デプロイでしか変わらないので、索引が古くなることはない。
-let livesByPerformer = null;
-
-function livesOf(artistName) {
-  if (!livesByPerformer) {
-    livesByPerformer = new Map();
-    const sorted = [...loadEvents()].sort((a, b) => a.live_date.localeCompare(b.live_date));
-    for (const live of sorted) {
-      for (const name of performerNames(live)) {
-        if (!livesByPerformer.has(name)) livesByPerformer.set(name, []);
-        livesByPerformer.get(name).push(live);
-      }
-    }
-  }
-  return livesByPerformer.get(artistName) || [];
-}
 
 // artist_profiles の description は、3,582件中2,912件が「現在調査中です」の
 // プレースホルダーのまま(2026-09-26時点)。中身が無いまま「紹介・見どころ」の枠だけ
@@ -141,7 +83,7 @@ export async function generateMetadata({ params }) {
 
   // SEO-PLAN.md P1-1: 過去も含めて出演実績が一件も無いページ(データ取得ミスで
   // 生成された芸人名など)は実質中身が無いため noindex にする(ソフト404対策)。
-  const stats = loadArtistStats()[artistName];
+  const stats = (await loadArtistPage(artistName))?.stats;
   const hasContent = (stats?.total_count ?? 0) > 0;
 
   return {
@@ -174,12 +116,13 @@ export default async function ArtistPage({ params }) {
     console.error('Supabase error (artist_profiles):', err);
   }
 
-  // ② ライブ一覧は静的スナップショット(events.json)から、出演者名の索引で引く
-  const today = new Date().toISOString().split('T')[0];
-  const filteredLives = livesOf(artistName).filter(live => live.live_date >= today);
-
-  // ③ 過去の出演履歴・よく出演する会場・よく共演する芸人はスクレイパー側で事前集計した静的JSONから取得
-  const stats = loadArtistStats()[artistName];
+  // ② 今後の出演予定と、過去の出演履歴・よく出演する会場・よく共演する芸人は
+  // スクレイパーが芸人ごとにまとめた artist_pages から取る。出演予定は出演者名の完全一致で
+  // 引いてある(「スパイク」に「スパイクシンフォニー」が混ざらない。publish_site_data.py 参照)
+  const artistPage = await loadArtistPage(artistName);
+  const today = jstToday();
+  const filteredLives = (artistPage?.upcoming || []).filter(live => live.live_date >= today);
+  const stats = artistPage?.stats;
   const description = usableDescription(profileData?.description);
   const products = productsFor(artistName);
   const summary = buildSummary(artistName, filteredLives, stats);

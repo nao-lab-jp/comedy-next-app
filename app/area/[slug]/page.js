@@ -7,8 +7,8 @@ import { addDays, eventDate, jstToday } from '@/utils/jst';
 import EventCards from '@/app/components/EventCards';
 import BrowseLinks from '@/app/components/BrowseLinks';
 
-// 掲載内容が変わるのはスクレイパーのpush(=再デプロイ)時と、日付が進んで
-// 過去の公演が外れる時だけ。エリアは9つしかないので1時間ごとに作り直しても軽い。
+// 掲載内容が変わるのはスクレイパーの実行時(/api/revalidate で再生成される)と、
+// 日付が進んで過去の公演が外れる時だけ。エリアは9つしかないので1時間ごとに作り直しても軽い。
 export const revalidate = 3600;
 export const dynamicParams = false;
 
@@ -20,9 +20,9 @@ export function generateStaticParams() {
   return AREAS.map(area => ({ slug: area.slug }));
 }
 
-function upcomingInArea(slug) {
+async function upcomingInArea(slug) {
   const today = jstToday();
-  return loadEvents()
+  return (await loadEvents())
     .filter(live => eventDate(live) >= today && areaOf(live.venue) === slug)
     .sort((a, b) => a.live_date.localeCompare(b.live_date));
 }
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }) {
   const area = areaBySlug(slug);
   if (!area) return {};
 
-  const lives = upcomingInArea(slug);
+  const lives = await upcomingInArea(slug);
   const venues = topVenues(lives, 3).map(([name]) => name).join('・');
 
   return {
@@ -57,7 +57,7 @@ export default async function AreaPage({ params }) {
   if (!area) notFound();
 
   const today = jstToday();
-  const lives = upcomingInArea(slug);
+  const lives = await upcomingInArea(slug);
   const until = addDays(today, DAYS_AHEAD);
   const shown = lives.filter(live => eventDate(live) < until).slice(0, MAX_EVENTS);
   const venues = topVenues(lives);

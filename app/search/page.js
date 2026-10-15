@@ -36,7 +36,7 @@ export default async function SearchPage({ searchParams }) {
   // 知らない slug は無視する(エリア無しで検索したのと同じ扱い)
   const area = areaBySlug(resolvedParams.area || "");
   const today = jstToday();
-  const events = loadEvents();
+  const events = await loadEvents();
 
   // 1. 検索ロジック
   let results = [];
