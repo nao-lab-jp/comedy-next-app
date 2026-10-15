@@ -51,10 +51,9 @@ export async function POST(request) {
   }
 
   for (const name of artists) {
-    // キャッシュのキーがエンコード済みのパスか元の文字列かはNext.jsの版によって
-    // 揺れがあるため、両方を指定しておく
+    // キャッシュのタグはエンコード済みのパス(/artist/%E3%82%B9...)で付くので、それに合わせる
+    // (サイト内リンクとsitemapも encodeURIComponent で作っている)
     revalidatePath(`/artist/${encodeURIComponent(name)}`);
-    revalidatePath(`/artist/${name}`);
   }
 
   if (body?.listPages) {

@@ -17,7 +17,12 @@ if (!supabaseKey) {
 // Cache-Control: private, no-cache, no-store のままだった。
 // キャッシュ可能なfetchを渡すことでページをISRに載せる。Vercelの Fluid Active CPU と
 // Supabaseのegressの両方を抑えるのが狙い。
-const REVALIDATE_SECONDS = 86400
+//
+// この値はfetchを呼んだページのrevalidateの上限にもなる(短い方が使われる)。1日にしていた間は
+// 芸人ページの revalidate を2日・7日にしても実際は1日ごとに描き直されていた。
+// 芸人ページはスクレイパーが変わったものだけ再生成させる(/api/revalidate)ので、ページ側と同じ
+// 7日に揃える。紹介文(artist_profiles)の更新が反映されるのは最長7日後になる。
+const REVALIDATE_SECONDS = 604800
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
     global: {
